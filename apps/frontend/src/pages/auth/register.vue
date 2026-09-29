@@ -103,7 +103,7 @@ const isEmail = (val: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || "Enter a valid email";
 const isNickName = (val: string) =>
   /^[a-zA-Z0-9_.-]{3,30}$/.test(val) ||
-  "3–30 characters: letters, numbers, _ . -";
+  "3-30 characters: letters, numbers, _ . -";
 const minLength = (n: number) => (val: string) =>
   val.length >= n || `At least ${n} characters`;
 const matchesPassword = (val: string) =>
