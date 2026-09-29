@@ -1,6 +1,6 @@
 {
-  "name": "@api-starter-kit/backend",
-  "version": "0.0.0",
+  "name": "@cisco-disco/backend",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "license": "MIT",

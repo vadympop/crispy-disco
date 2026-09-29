@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "@cisco-disco/frontend",
   "version": "0.0.1",
   "private": true,
   "description": "A Quasar Project",
@@ -23,6 +23,7 @@
     "postinstall": "quasar prepare --silent"
   },
   "dependencies": {
+    "@cisco-disco/backend": "workspace:*",
     "@quasar/extras": "^2.1.0",
     "@tuyau/core": "^1.2.2",
     "pinia": "^4.0.2",
