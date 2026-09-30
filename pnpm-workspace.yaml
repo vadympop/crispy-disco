@@ -5,4 +5,9 @@ allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
   better-sqlite3: true
+  core-js: true
+  electron-winstaller: true
   esbuild: true
+  lightningcss: true
+  rolldown: true
+  unrs-resolver: true
