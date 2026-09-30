@@ -45,7 +45,7 @@ export default defineConfig(ctx => {
       // https://v2.quasar.dev/quasar-cli-vite/page-routing-with-vue-router#filename-based-routing
       filenameBasedRouting: true,
 
-      vueRouterMode: "hash", // available values: 'hash', 'history'
+      vueRouterMode: "history", // available values: 'hash', 'history'
       // vueRouterBase,
 
       // publicPath: '/',
@@ -84,6 +84,10 @@ export default defineConfig(ctx => {
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
     devServer: {
+      // allow serving files from the monorepo root node_modules (fonts from @quasar/extras)
+      fs: {
+        allow: [ctx.appPaths.resolve.app("../..")]
+      },
       // vueDevtools: true,
       // https: true,
       open: true // opens browser window automatically

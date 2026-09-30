@@ -13,7 +13,14 @@
 
         <q-toolbar-title> Quasar App </q-toolbar-title>
 
-        <div>Quasar v{{ $q.version }}</div>
+        <q-btn
+          flat
+          dense
+          no-caps
+          icon="logout"
+          label="Log out"
+          to="/auth/login"
+        />
       </q-toolbar>
     </q-header>
 
