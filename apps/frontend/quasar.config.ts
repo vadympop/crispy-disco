@@ -84,6 +84,10 @@ export default defineConfig(ctx => {
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
     devServer: {
+      // allow serving files from the monorepo root node_modules (fonts from @quasar/extras)
+      fs: {
+        allow: [ctx.appPaths.resolve.app("../..")]
+      },
       // vueDevtools: true,
       // https: true,
       open: true // opens browser window automatically
