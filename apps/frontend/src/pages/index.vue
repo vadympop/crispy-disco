@@ -2,23 +2,24 @@
   <q-layout view="hHh lpR fFf">
     <q-header class="landing-header">
       <q-toolbar class="landing-container">
-        <q-icon name="forum" size="28px" class="q-mr-sm" />
+        <DiscoBallLogo :size="30" class="q-mr-sm" />
         <q-toolbar-title class="text-weight-bold">crispy-disco</q-toolbar-title>
 
         <q-btn
-          flat
+          rounded
+          outline
           no-caps
+          color="white"
           label="Log in"
           to="/auth/login"
           class="gt-xs q-mr-sm"
         />
         <q-btn
           rounded
-          unelevated
+          outline
           no-caps
           color="white"
-          text-color="dark"
-          label="Open app"
+          label="Register"
           to="/auth/register"
         />
       </q-toolbar>
@@ -28,10 +29,9 @@
       <q-page>
         <section class="hero text-white">
           <div class="landing-container text-center">
-            <h1 class="hero-title">A place for your team to talk</h1>
+            <h1 class="hero-title">A place for your gang to talk with huzz</h1>
             <p class="hero-subtitle">
-              IRC-style channels, slash commands and @mentions. Public or
-              private, on your phone or on your desktop.
+              Channels, slash commands and @mentions. Public or private.
             </p>
 
             <div class="hero-actions">
@@ -72,7 +72,7 @@
               class="feature-card"
             >
               <q-card-section>
-                <q-icon :name="feature.icon" size="32px" color="primary" />
+                <q-icon :name="feature.icon" size="32px" class="feature-icon" />
                 <div class="text-subtitle1 text-weight-bold q-mt-sm">
                   {{ feature.title }}
                 </div>
@@ -84,7 +84,7 @@
           </div>
         </section>
 
-        <footer class="landing-footer text-center text-grey-7 q-pa-lg">
+        <footer class="landing-footer text-center text-white q-pa-lg">
           crispy-disco · semester project
         </footer>
       </q-page>
@@ -93,6 +93,8 @@
 </template>
 
 <script setup lang="ts">
+import DiscoBallLogo from "@/components/DiscoBallLogo.vue";
+
 interface Feature {
   icon: string;
   title: string;
@@ -139,7 +141,7 @@ const features: Feature[] = [
 
 <style scoped>
 .landing-header {
-  background: #505ba3;
+  background: #252a5c;
 }
 
 .landing-container {
@@ -185,8 +187,12 @@ const features: Feature[] = [
   border-radius: 12px;
 }
 
+.feature-icon {
+  color: #505ba3;
+}
+
 .landing-footer {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: #505ba3;
 }
 
 /* phones: stack the hero buttons full width */
