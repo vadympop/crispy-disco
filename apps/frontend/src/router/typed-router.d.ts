@@ -36,21 +36,6 @@ declare module 'vue-router/auto-routes' {
       '/',
       Record<never, never>,
       Record<never, never>,
-      | '//(index)'
-      | '//second'
-    >,
-    '//(index)': RouteRecordInfo<
-      '//(index)',
-      '/',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '//second': RouteRecordInfo<
-      '//second',
-      '/second',
-      Record<never, never>,
-      Record<never, never>,
       | never
     >,
     '/[...path]': RouteRecordInfo<
@@ -82,6 +67,28 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/channels': RouteRecordInfo<
+      '/channels',
+      '/channels',
+      Record<never, never>,
+      Record<never, never>,
+      | '/channels/(index)'
+      | '/channels/[name]'
+    >,
+    '/channels/(index)': RouteRecordInfo<
+      '/channels/(index)',
+      '/channels',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/channels/[name]': RouteRecordInfo<
+      '/channels/[name]',
+      '/channels/:name',
+      { name: ParamValue<true> },
+      { name: ParamValue<false> },
+      | never
+    >,
   }
 
   /**
@@ -98,24 +105,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/index.vue': {
       routes:
         | '/'
-        | '//(index)'
-        | '//second'
-      views:
-        | 'default'
-      pathParamNames:
-        | never
-    }
-    'src/pages/index/(index).vue': {
-      routes:
-        | '//(index)'
-      views:
-        | never
-      pathParamNames:
-        | never
-    }
-    'src/pages/index/second.vue': {
-      routes:
-        | '//second'
       views:
         | never
       pathParamNames:
@@ -154,6 +143,32 @@ declare module 'vue-router/auto-routes' {
         | never
       pathParamNames:
         | never
+    }
+    'src/pages/channels.vue': {
+      routes:
+        | '/channels'
+        | '/channels/(index)'
+        | '/channels/[name]'
+      views:
+        | 'default'
+      pathParamNames:
+        | never
+    }
+    'src/pages/channels/(index).vue': {
+      routes:
+        | '/channels/(index)'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/channels/[name].vue': {
+      routes:
+        | '/channels/[name]'
+      views:
+        | never
+      pathParamNames:
+        | 'name'
     }
   }
 
