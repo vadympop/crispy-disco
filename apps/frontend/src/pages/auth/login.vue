@@ -5,7 +5,7 @@
       <div class="text-caption text-grey-7">Welcome back to crispy-disco</div>
     </q-card-section>
 
-    <q-form class="q-gutter-md q-px-md q-pb-md" greedy>
+    <q-form class="q-gutter-md q-px-md q-pb-md" greedy @submit="onSubmit">
       <q-input
         v-model="form.email"
         label="Email"
@@ -43,7 +43,9 @@
 
     <q-card-section class="text-center text-body2">
       Don't have an account?
-      <router-link to="/auth/register" class="text-primary">Register</router-link>
+      <router-link to="/auth/register" class="text-primary"
+        >Register</router-link
+      >
     </q-card-section>
   </q-card>
 </template>
@@ -65,12 +67,12 @@ const isEmail = (val: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || "Enter a valid email";
 
 // TODO: replace with a real API call once the backend is ready
-// async function onSubmit() {
-//   loading.value = true;
-//   await new Promise(resolve => setTimeout(resolve, 500));
-//   loading.value = false;
-//   await router.push("/");
-// }
+async function onSubmit() {
+  loading.value = true;
+  await new Promise(resolve => setTimeout(resolve, 500));
+  loading.value = false;
+  await router.push("/channels");
+}
 </script>
 
 <style scoped>

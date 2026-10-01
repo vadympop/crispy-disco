@@ -114,7 +114,7 @@ async function onSubmit() {
   loading.value = true;
   await new Promise(resolve => setTimeout(resolve, 500));
   loading.value = false;
-  await router.push("/");
+  await router.push("/channels");
 }
 </script>
 
