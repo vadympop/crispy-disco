@@ -1,101 +1,202 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
-      <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
-
-        <q-toolbar-title> Quasar App </q-toolbar-title>
+  <q-layout view="hHh lpR fFf">
+    <q-header class="landing-header">
+      <q-toolbar class="landing-container">
+        <q-icon name="forum" size="28px" class="q-mr-sm" />
+        <q-toolbar-title class="text-weight-bold">crispy-disco</q-toolbar-title>
 
         <q-btn
           flat
-          dense
           no-caps
-          icon="logout"
-          label="Log out"
+          label="Log in"
           to="/auth/login"
+          class="gt-xs q-mr-sm"
+        />
+        <q-btn
+          rounded
+          unelevated
+          no-caps
+          color="white"
+          text-color="dark"
+          label="Open app"
+          to="/auth/register"
         />
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-list>
-        <q-item-label header> Essential Links </q-item-label>
-
-        <EssentialLink
-          v-for="link in linksList"
-          :key="link.label"
-          v-bind="link"
-        />
-      </q-list>
-    </q-drawer>
-
     <q-page-container>
-      <router-view />
+      <q-page>
+        <section class="hero text-white">
+          <div class="landing-container text-center">
+            <h1 class="hero-title">A place for your team to talk</h1>
+            <p class="hero-subtitle">
+              IRC-style channels, slash commands and @mentions. Public or
+              private, on your phone or on your desktop.
+            </p>
+
+            <div class="hero-actions">
+              <q-btn
+                rounded
+                unelevated
+                no-caps
+                size="lg"
+                color="white"
+                text-color="dark"
+                icon="person_add"
+                label="Create an account"
+                to="/auth/register"
+              />
+              <q-btn
+                rounded
+                outline
+                no-caps
+                size="lg"
+                color="white"
+                icon="login"
+                label="I already have one"
+                to="/auth/login"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="landing-container q-py-xl">
+          <div class="text-h5 text-center q-mb-lg">What you can do</div>
+
+          <div class="features">
+            <q-card
+              v-for="feature in features"
+              :key="feature.title"
+              flat
+              bordered
+              class="feature-card"
+            >
+              <q-card-section>
+                <q-icon :name="feature.icon" size="32px" color="primary" />
+                <div class="text-subtitle1 text-weight-bold q-mt-sm">
+                  {{ feature.title }}
+                </div>
+                <div class="text-body2 text-grey-8">
+                  {{ feature.description }}
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </section>
+
+        <footer class="landing-footer text-center text-grey-7 q-pa-lg">
+          crispy-disco · semester project
+        </footer>
+      </q-page>
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import EssentialLink, {
-  type EssentialLinkProps
-} from "@/components/EssentialLink.vue";
+interface Feature {
+  icon: string;
+  title: string;
+  description: string;
+}
 
-const linksList: EssentialLinkProps[] = [
+const features: Feature[] = [
   {
-    label: "Docs",
-    caption: "quasar.dev",
-    icon: "school",
-    link: "https://quasar.dev"
+    icon: "tag",
+    title: "Channels",
+    description:
+      "Create public or private channels. The creator is the admin and can close the channel any time."
   },
   {
-    label: "GitHub",
-    caption: "github.com/quasarframework",
-    icon: "code",
-    link: "https://github.com/quasarframework"
+    icon: "terminal",
+    title: "Command line",
+    description:
+      "/join, /invite, /kick, /list and more: everything from one input box."
   },
   {
-    label: "Discord Chat Channel",
-    caption: "chat.quasar.dev",
-    icon: "chat",
-    link: "https://chat.quasar.dev"
+    icon: "alternate_email",
+    title: "Mentions",
+    description: "Address someone with @nickname and it stands out for them."
   },
   {
-    label: "Forum",
-    caption: "forum.quasar.dev",
-    icon: "record_voice_over",
-    link: "https://forum.quasar.dev"
+    icon: "notifications",
+    title: "Notifications",
+    description:
+      "Get notified about new messages, or only about mentions, while the app is in the background."
   },
   {
-    label: "Twitter",
-    caption: "@quasarframework",
-    icon: "rss_feed",
-    link: "https://twitter.quasar.dev"
+    icon: "circle",
+    title: "Statuses",
+    description: "Online, do not disturb or offline. Everyone sees yours."
   },
   {
-    label: "Facebook",
-    caption: "@QuasarFramework",
-    icon: "public",
-    link: "https://facebook.quasar.dev"
-  },
-  {
-    label: "Quasar Awesome",
-    caption: "Community Quasar projects",
-    icon: "favorite",
-    link: "https://awesome.quasar.dev"
+    icon: "keyboard",
+    title: "Live typing",
+    description:
+      "See who is typing and peek at their draft as it is being written."
   }
 ];
-
-const leftDrawerOpen = ref(false);
-
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
-}
 </script>
+
+<style scoped>
+.landing-header {
+  background: #505ba3;
+}
+
+.landing-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.hero {
+  background: linear-gradient(180deg, #505ba3 0%, #3b4488 100%);
+  padding: 64px 0 80px;
+}
+
+.hero-title {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  line-height: 1.15;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  max-width: 640px;
+  margin: 0 auto 32px;
+  opacity: 0.9;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.feature-card {
+  border-radius: 12px;
+}
+
+.landing-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* phones: stack the hero buttons full width */
+@media (max-width: 599px) {
+  .hero {
+    padding: 40px 0 56px;
+  }
+
+  .hero-actions .q-btn {
+    width: 100%;
+  }
+}
+</style>
