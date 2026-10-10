@@ -20,7 +20,14 @@
     </defs>
 
     <!-- hanging string -->
-    <line x1="16" y1="0" x2="16" y2="7" stroke="currentColor" stroke-width="1.2" />
+    <line
+      x1="16"
+      y1="0"
+      x2="16"
+      y2="7"
+      stroke="currentColor"
+      stroke-width="1.2"
+    />
 
     <circle cx="16" cy="18" r="11" :fill="`url(#${uid}-ball)`" />
 
@@ -43,7 +50,14 @@
 
     <!-- lit facets -->
     <rect x="9.2" y="13.9" width="3" height="3" fill="#ffffff" opacity="0.9" />
-    <rect x="12.7" y="10.6" width="2.8" height="2.6" fill="#ffffff" opacity="0.7" />
+    <rect
+      x="12.7"
+      y="10.6"
+      width="2.8"
+      height="2.6"
+      fill="#ffffff"
+      opacity="0.7"
+    />
 
     <circle cx="16" cy="18" r="11" stroke="currentColor" stroke-width="1" />
 

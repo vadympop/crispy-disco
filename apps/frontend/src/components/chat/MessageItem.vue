@@ -3,11 +3,16 @@
     class="message row no-wrap q-px-md q-py-xs"
     :class="{ 'message-mention': mentionsMe }"
   >
-    <UserAvatar :nick-name="message.authorNick" class="q-mr-sm q-mt-xs" />
+    <UserAvatar :nick-name="message.authorNick" class="author q-mr-sm q-mt-xs">
+      <UserProfileMenu :nick-name="message.authorNick" />
+    </UserAvatar>
 
     <div class="col" style="min-width: 0">
       <div class="row items-baseline q-gutter-x-sm">
-        <span class="text-weight-bold">{{ message.authorNick }}</span>
+        <span class="author author-nick text-weight-bold"
+          >{{ message.authorNick }}
+          <UserProfileMenu :nick-name="message.authorNick" />
+        </span>
         <span class="text-caption message-time">{{ time }}</span>
       </div>
 
@@ -32,6 +37,7 @@ import { date } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
 import type { Message } from "@/types/chat";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
+import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
 
 const props = defineProps<{ message: Message }>();
 
@@ -56,6 +62,14 @@ const time = computed(() => date.formatDate(props.message.createdAt, "HH:mm"));
 
 .message:hover {
   background: rgba(255, 255, 255, 0.04);
+}
+
+.author {
+  cursor: pointer;
+}
+
+.author-nick:hover {
+  text-decoration: underline;
 }
 
 .message-time {

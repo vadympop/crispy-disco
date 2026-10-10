@@ -15,14 +15,23 @@
         />
 
         <q-toolbar-title v-if="channel" class="row items-center no-wrap">
+          <UserAvatar
+            v-if="channel.directWith"
+            :nick-name="channel.directWith"
+            size="28px"
+            class="q-mr-sm cursor-pointer"
+          >
+            <UserProfileMenu :nick-name="channel.directWith" />
+          </UserAvatar>
           <q-icon
+            v-else
             :name="channel.isPrivate ? 'lock' : 'tag'"
             size="22px"
             class="q-mr-xs"
           />
-          <span class="ellipsis">{{ channel.name }}</span>
+          <span class="ellipsis">{{ chat.channelTitle(channel) }}</span>
           <q-badge
-            v-if="chat.isAdmin(channel)"
+            v-if="chat.isAdmin(channel) && !channel.directWith"
             text-color="dark"
             label="admin"
             class="admin-badge q-ml-sm"
@@ -97,6 +106,8 @@ import { useRoute } from "vue-router";
 import { useQuasar } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
 import DiscoBallLogo from "@/components/DiscoBallLogo.vue";
+import UserAvatar from "@/components/chat/UserAvatar.vue";
+import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
 import ChannelList from "@/components/chat/ChannelList.vue";
 import UserStatusMenu from "@/components/chat/UserStatusMenu.vue";
 import TypingIndicator from "@/components/chat/TypingIndicator.vue";

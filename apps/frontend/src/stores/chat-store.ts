@@ -7,6 +7,7 @@ import type {
   ProfileUpdate,
   TypingDraft,
   User,
+  UserStats,
   UserStatus
 } from "@/types/chat";
 import { parseCommand } from "@/lib/commands";
@@ -77,6 +78,24 @@ export const useChatStore = defineStore("chat", () => {
     return users.value.find(user => user.nickName === nickName);
   }
 
+  // Direct chats are titled with the other person's name, channels with theirs
+  function channelTitle(channel: Channel): string {
+    if (!channel.directWith) {
+      return channel.name;
+    }
+    const user = findUser(channel.directWith);
+    return user ? `${user.firstName} ${user.lastName}` : channel.directWith;
+  }
+
+  // How a channel is referred to in sentences: "#general" or "Ed Horvath"
+  function channelLabel(name: string): string {
+    const channel = findChannel(name);
+    if (!channel) {
+      return `#${name}`;
+    }
+    return channel.directWith ? channelTitle(channel) : `#${channel.name}`;
+  }
+
   function isAdmin(channel: Channel) {
     return channel.adminNick === me.value.nickName;
   }
@@ -117,6 +136,8 @@ export const useChatStore = defineStore("chat", () => {
     };
     const loaded = messagesByChannel.value[channelName] ?? [];
     messagesByChannel.value[channelName] = [...loaded, message];
+    // the fake server keeps it too, so it counts in the user stats
+    (serverHistory[channelName] ??= []).push(message);
     channel.lastMessageAt = message.createdAt;
   }
 
@@ -160,6 +181,47 @@ export const useChatStore = defineStore("chat", () => {
     return true;
   }
 
+  // Opens the private chat with `nick`, creating it the first time.
+  // Returns the channel name to navigate to.
+  function startDirectChat(nick: string): string {
+    const existing = channels.value.find(c => c.directWith === nick);
+    if (existing) {
+      return existing.name;
+    }
+
+    // "@" can't appear in channel names, so this never clashes with /join
+    const name = `@${nick}`;
+    channels.value.push({
+      name,
+      isPrivate: true,
+      adminNick: me.value.nickName,
+      invited: false,
+      lastMessageAt: new Date().toISOString(),
+      directWith: nick
+    });
+    members.value[name] = [me.value.nickName, nick];
+    return name;
+  }
+
+  function userStats(nick: string): UserStats {
+    let messageCount = 0;
+    for (const history of Object.values(serverHistory)) {
+      messageCount += history.filter(m => m.authorNick === nick).length;
+    }
+
+    const sharedChannels = channels.value
+      .filter(
+        c =>
+          !c.invited &&
+          !c.directWith &&
+          members.value[c.name]?.includes(nick) &&
+          members.value[c.name]?.includes(me.value.nickName)
+      )
+      .map(c => c.name);
+
+    return { messageCount, sharedChannels };
+  }
+
   function removeChannel(name: string) {
     channels.value = channels.value.filter(channel => channel.name !== name);
   }
@@ -197,7 +259,11 @@ export const useChatStore = defineStore("chat", () => {
     removeChannel(name);
     delete members.value[name];
     delete messagesByChannel.value[name];
-    notifyInfo(`#${name} was deleted`);
+    notifyInfo(
+      channel.directWith
+        ? `Chat with ${channelTitle(channel)} was deleted`
+        : `#${name} was deleted`
+    );
   }
 
   function acceptInvite(name: string) {
@@ -393,6 +459,13 @@ export const useChatStore = defineStore("chat", () => {
       return {};
     }
 
+    // A direct chat always stays between the two of you
+    const isMembership = ["invite", "revoke", "kick"].includes(command.name);
+    if (channel.directWith && isMembership) {
+      notifyError(`/${command.name} is not available in a direct chat`);
+      return {};
+    }
+
     switch (command.name) {
       case "invite":
       case "revoke":
@@ -465,6 +538,8 @@ export const useChatStore = defineStore("chat", () => {
     sortedChannels,
     findChannel,
     findUser,
+    channelTitle,
+    channelLabel,
     isAdmin,
     membersOf,
     loadOlder,
@@ -473,6 +548,8 @@ export const useChatStore = defineStore("chat", () => {
     leaveChannel,
     deleteChannel,
     acceptInvite,
+    startDirectChat,
+    userStats,
     declineInvite,
     setStatus,
     updateProfile,

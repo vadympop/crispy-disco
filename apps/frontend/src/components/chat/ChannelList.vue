@@ -67,15 +67,21 @@
       class="q-mx-sm channel-item"
     >
       <q-item-section avatar class="channel-icon">
-        <q-icon :name="channel.isPrivate ? 'lock' : 'tag'" size="20px" />
+        <UserAvatar
+          v-if="channel.directWith"
+          :nick-name="channel.directWith"
+          size="22px"
+          class="dm-avatar"
+        />
+        <q-icon v-else :name="channel.isPrivate ? 'lock' : 'tag'" size="20px" />
       </q-item-section>
       <q-item-section>
-        <q-item-label lines="1">{{ channel.name }}</q-item-label>
+        <q-item-label lines="1">{{ chat.channelTitle(channel) }}</q-item-label>
       </q-item-section>
       <q-item-section side class="row no-wrap items-center">
         <div class="row no-wrap items-center">
           <q-icon
-            v-if="chat.isAdmin(channel)"
+            v-if="chat.isAdmin(channel) && !channel.directWith"
             name="star"
             size="16px"
             class="text-disco-yellow"
@@ -94,7 +100,12 @@
           >
             <q-menu>
               <q-list dense style="min-width: 160px">
-                <q-item v-close-popup clickable @click="leave(channel.name)">
+                <q-item
+                  v-if="!channel.directWith"
+                  v-close-popup
+                  clickable
+                  @click="leave(channel.name)"
+                >
                   <q-item-section avatar
                     ><q-icon name="logout"
                   /></q-item-section>
@@ -110,7 +121,9 @@
                   <q-item-section avatar
                     ><q-icon name="delete"
                   /></q-item-section>
-                  <q-item-section>Delete channel</q-item-section>
+                  <q-item-section>{{
+                    channel.directWith ? "Delete chat" : "Delete channel"
+                  }}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
@@ -134,6 +147,7 @@ import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useChatStore } from "@/stores/chat-store";
 import CreateChannelDialog from "@/components/chat/CreateChannelDialog.vue";
+import UserAvatar from "@/components/chat/UserAvatar.vue";
 
 const chat = useChatStore();
 const route = useRoute();
@@ -176,6 +190,11 @@ async function goHomeIfOpen(name: string) {
 
 .channel-icon {
   min-width: 32px;
+}
+
+/* the circle avatar is a bit heavy at this size, the font follows it */
+.dm-avatar {
+  font-size: 11px;
 }
 
 .channel-active {

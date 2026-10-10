@@ -26,6 +26,14 @@ export interface Channel {
   // true = the user was invited but hasn't accepted yet
   invited: boolean;
   lastMessageAt: string;
+  // set for a private 1-on-1 chat: the nick of the other person
+  directWith?: string;
+}
+
+export interface UserStats {
+  messageCount: number;
+  // regular channels (not direct chats) both of us are in
+  sharedChannels: string[];
 }
 
 export interface Message {

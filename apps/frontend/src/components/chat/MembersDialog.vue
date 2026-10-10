@@ -2,12 +2,18 @@
   <q-dialog v-model="open">
     <q-card class="members-card">
       <q-card-section class="row items-center">
-        <div class="text-h6 col">Members of #{{ channel }}</div>
+        <div class="text-h6 col ellipsis">
+          Members of {{ chat.channelLabel(channel) }}
+        </div>
         <q-btn v-close-popup flat round dense icon="close" aria-label="Close" />
       </q-card-section>
 
       <q-list class="scroll" style="max-height: 60vh">
-        <q-item v-for="member in members" :key="member.nickName">
+        <q-item v-for="member in members" :key="member.nickName" clickable>
+          <UserProfileMenu
+            :nick-name="member.nickName"
+            @navigated="open = false"
+          />
           <q-item-section avatar>
             <UserAvatar :nick-name="member.nickName" />
           </q-item-section>
@@ -47,6 +53,7 @@ import { computed } from "vue";
 import { useChatStore } from "@/stores/chat-store";
 import { statusOption } from "@/lib/status";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
+import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
 
 const props = defineProps<{ channel: string }>();
 const open = defineModel<boolean>({ required: true });

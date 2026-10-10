@@ -12,7 +12,7 @@
         v-if="!hasMore"
         class="text-center text-caption channel-start q-py-md"
       >
-        This is the beginning of #{{ channel }}
+        This is the beginning of {{ beginning }}
       </div>
 
       <MessageItem
@@ -39,6 +39,13 @@ const hasMore = ref(true);
 if (!chat.messagesByChannel[props.channel]) {
   hasMore.value = chat.loadOlder(props.channel);
 }
+
+const beginning = computed(() => {
+  const label = chat.channelLabel(props.channel);
+  return chat.findChannel(props.channel)?.directWith
+    ? `your chat with ${label}`
+    : label;
+});
 
 const messages = computed(() => chat.messagesByChannel[props.channel] ?? []);
 

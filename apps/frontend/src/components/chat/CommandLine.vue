@@ -1,28 +1,32 @@
 <template>
   <div class="command-line q-px-md q-pb-sm">
     <!-- Command suggestions while the user types "/..." -->
-    <q-list
-      v-if="suggestions.length > 0"
-      dense
-      bordered
-      class="suggestions q-mb-xs"
-    >
-      <q-item
-        v-for="command in suggestions"
-        :key="command.usage"
-        clickable
-        @click="pickSuggestion(command.usage)"
-      >
-        <q-item-section>
-          <q-item-label class="text-weight-medium">{{
-            command.usage
-          }}</q-item-label>
-        </q-item-section>
-        <q-item-section side>
-          <q-item-label caption>{{ command.description }}</q-item-label>
-        </q-item-section>
-      </q-item>
-    </q-list>
+    <div v-if="showSuggestions" class="suggestions q-mb-xs">
+      <q-list ref="suggestionList" dense class="suggestion-items">
+        <q-item
+          v-for="(command, i) in suggestions"
+          :key="command.usage"
+          clickable
+          :active="i === activeIndex"
+          active-class="suggestion-active"
+          @mouseenter="activeIndex = i"
+          @click="pickSuggestion(command.usage)"
+        >
+          <q-item-section>
+            <q-item-label class="text-weight-medium">{{
+              command.usage
+            }}</q-item-label>
+          </q-item-section>
+          <q-item-section side>
+            <q-item-label caption>{{ command.description }}</q-item-label>
+          </q-item-section>
+        </q-item>
+      </q-list>
+      <div class="suggestion-hint gt-xs">
+        <kbd>↑</kbd><kbd>↓</kbd> navigate · <kbd>Enter</kbd> or
+        <kbd>Tab</kbd> select · <kbd>Esc</kbd> close
+      </div>
+    </div>
 
     <q-input
       ref="inputRef"
@@ -33,7 +37,7 @@
       rounded
       class="command-input"
       :placeholder="placeholder"
-      @keydown.enter="onEnter"
+      @keydown="onKeydown"
     >
       <template #prepend>
         <q-icon :name="isCommand ? 'terminal' : 'chat'" />
@@ -55,9 +59,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef } from "vue";
+import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 import { useRouter } from "vue-router";
-import type { QInput } from "quasar";
+import type { QInput, QList } from "quasar";
 import { COMMANDS } from "@/lib/commands";
 import { useChatStore } from "@/stores/chat-store";
 
@@ -67,8 +71,13 @@ const emit = defineEmits<{ showMembers: [] }>();
 const chat = useChatStore();
 const router = useRouter();
 const inputRef = useTemplateRef<QInput>("inputRef");
+const suggestionList = useTemplateRef<QList>("suggestionList");
 
 const text = ref("");
+// highlighted suggestion, moved with the arrow keys
+const activeIndex = ref(0);
+// Esc hides the suggestions until the text changes again
+const dismissed = ref(false);
 
 const isCommand = computed(() => text.value.trimStart().startsWith("/"));
 
@@ -79,7 +88,7 @@ const canSend = computed(
 
 const placeholder = computed(() =>
   props.channel
-    ? `Message #${props.channel} or type / for commands`
+    ? `Message ${chat.channelLabel(props.channel)} or type / for commands`
     : "Type /join channelName to get started"
 );
 
