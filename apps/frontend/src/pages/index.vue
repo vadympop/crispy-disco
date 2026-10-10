@@ -170,7 +170,7 @@ const features: Feature[] = [
 }
 
 .hero {
-  background: linear-gradient(180deg, #505ba3 0%, #3b4488 100%);
+  background: #505ba3;
   padding: 104px 0 80px;
 }
 

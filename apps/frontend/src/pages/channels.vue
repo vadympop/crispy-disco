@@ -176,9 +176,9 @@ watch(
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* same gradient as the landing hero, pinned so long chats don't stretch it */
+/* same solid purple as the landing hero and the auth page */
 .chat-layout :deep(.q-page-container) {
-  background: linear-gradient(180deg, #505ba3 0%, #3b4488 100%) fixed;
+  background: #505ba3;
 }
 
 .drawer-brand {
