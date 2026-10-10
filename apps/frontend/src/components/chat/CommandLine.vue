@@ -102,18 +102,80 @@ const suggestions = computed(() => {
 });
 
 function pickSuggestion(usage: string) {
-  // "/join channelName [private]" -> "/join "
-  text.value = `${usage.split(" ")[0]} `;
+  text.value = `${commandName(usage)} `;
   inputRef.value?.focus();
 }
 
-// Enter sends, Shift+Enter inserts a new line
-function onEnter(event: KeyboardEvent) {
-  if (event.shiftKey) {
-    return;
+const showSuggestions = computed(
+  () => suggestions.value.length > 0 && !dismissed.value
+);
+
+// a new filter result starts again from the first match
+watch(suggestions, () => {
+  activeIndex.value = 0;
+});
+
+watch(text, () => {
+  dismissed.value = false;
+});
+
+// Keep the highlighted row visible when the list scrolls
+watch(activeIndex, async () => {
+  await nextTick();
+  const el = suggestionList.value?.$el as HTMLElement | undefined;
+  el?.querySelector(".suggestion-active")?.scrollIntoView({ block: "nearest" });
+});
+
+function moveActive(step: number) {
+  const count = suggestions.value.length;
+  // wraps around at both ends
+  activeIndex.value = (activeIndex.value + step + count) % count;
+}
+
+// While suggestions are open: arrows move, Enter/Tab pick, Esc closes.
+// Otherwise Enter sends and Shift+Enter inserts a new line.
+function onKeydown(event: KeyboardEvent) {
+  if (showSuggestions.value) {
+    const active = suggestions.value[activeIndex.value];
+    switch (event.key) {
+      case "ArrowDown":
+      case "ArrowUp":
+        event.preventDefault();
+        moveActive(event.key === "ArrowDown" ? 1 : -1);
+        return;
+      case "Tab":
+        event.preventDefault();
+        if (active) {
+          pickSuggestion(active.usage);
+        }
+        return;
+      case "Escape":
+        event.preventDefault();
+        dismissed.value = true;
+        return;
+      case "Enter":
+        if (event.shiftKey || !active) {
+          break;
+        }
+        // "/list" typed in full runs right away, "/li" completes first
+        if (text.value.trim() !== commandName(active.usage)) {
+          event.preventDefault();
+          pickSuggestion(active.usage);
+          return;
+        }
+        break;
+    }
   }
-  event.preventDefault();
-  void submit();
+
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    void submit();
+  }
+}
+
+// "/join channelName [private]" -> "/join"
+function commandName(usage: string) {
+  return usage.split(" ")[0]!;
 }
 
 async function submit() {
@@ -144,8 +206,36 @@ async function submit() {
   background: #2f3572;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
+  overflow: hidden;
+}
+
+.suggestion-items {
   max-height: 240px;
   overflow-y: auto;
+}
+
+.suggestion-active {
+  background: #505ba3;
+  color: #ffffff;
+}
+
+.suggestion-hint {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 18px;
+  margin: 0 2px;
+  padding: 0 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  text-align: center;
 }
 
 .command-input :deep(.q-field__control) {
