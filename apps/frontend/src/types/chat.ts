@@ -9,7 +9,15 @@ export interface User {
   lastName: string;
   nickName: string;
   status: UserStatus;
+  // data: URL of an uploaded picture; without it the avatar shows the initial
+  avatarUrl?: string;
 }
+
+// The fields the user can edit in the profile settings dialog
+export type ProfileUpdate = Pick<
+  User,
+  "nickName" | "firstName" | "lastName" | "avatarUrl"
+>;
 
 export interface Channel {
   name: string;

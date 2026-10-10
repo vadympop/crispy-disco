@@ -4,11 +4,14 @@
     <q-infinite-scroll reverse :offset="250" @load="onLoad">
       <template #loading>
         <div class="row justify-center q-my-md">
-          <q-spinner-dots color="primary" size="32px" />
+          <q-spinner-dots color="white" size="32px" />
         </div>
       </template>
 
-      <div v-if="!hasMore" class="text-center text-caption text-grey-6 q-py-md">
+      <div
+        v-if="!hasMore"
+        class="text-center text-caption channel-start q-py-md"
+      >
         This is the beginning of #{{ channel }}
       </div>
 
@@ -65,6 +68,10 @@ watch(
 </script>
 
 <style scoped>
+.channel-start {
+  opacity: 0.6;
+}
+
 /* the parent gives the height (flex "col"), min-height: 0 lets it shrink */
 .message-scroll {
   min-height: 0;

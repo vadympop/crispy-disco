@@ -30,7 +30,7 @@
       outlined
       dense
       autogrow
-      bg-color="white"
+      rounded
       class="command-input"
       :placeholder="placeholder"
       @keydown.enter="onEnter"
@@ -44,7 +44,7 @@
           dense
           round
           icon="send"
-          color="primary"
+          color="white"
           aria-label="Send"
           :disable="!canSend"
           @click="submit"
@@ -132,10 +132,15 @@ async function submit() {
 
 <style scoped>
 .suggestions {
-  background: white;
-  border-radius: 8px;
+  background: #2f3572;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
   max-height: 240px;
   overflow-y: auto;
+}
+
+.command-input :deep(.q-field__control) {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* 16px stops iOS Safari from zooming in on focus */

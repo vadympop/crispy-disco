@@ -3,19 +3,12 @@
     class="message row no-wrap q-px-md q-py-xs"
     :class="{ 'message-mention': mentionsMe }"
   >
-    <q-avatar
-      size="36px"
-      class="q-mr-sm q-mt-xs"
-      :color="isOwn ? 'primary' : 'blue-grey-5'"
-      text-color="white"
-    >
-      {{ message.authorNick.charAt(0).toUpperCase() }}
-    </q-avatar>
+    <UserAvatar :nick-name="message.authorNick" class="q-mr-sm q-mt-xs" />
 
     <div class="col" style="min-width: 0">
       <div class="row items-baseline q-gutter-x-sm">
         <span class="text-weight-bold">{{ message.authorNick }}</span>
-        <span class="text-caption text-grey-6">{{ time }}</span>
+        <span class="text-caption message-time">{{ time }}</span>
       </div>
 
       <div class="message-text">
@@ -38,12 +31,11 @@ import { computed } from "vue";
 import { date } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
 import type { Message } from "@/types/chat";
+import UserAvatar from "@/components/chat/UserAvatar.vue";
 
 const props = defineProps<{ message: Message }>();
 
 const chat = useChatStore();
-
-const isOwn = computed(() => props.message.authorNick === chat.me.nickName);
 
 // Splitting with a capture group keeps the "@nick" pieces in the result:
 // "hi @ed !" -> ["hi ", "@ed", " !"]
@@ -62,19 +54,29 @@ const time = computed(() => date.formatDate(props.message.createdAt, "HH:mm"));
   word-break: break-word;
 }
 
+.message:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.message-time {
+  opacity: 0.6;
+}
+
 .mention {
-  color: #505ba3;
+  color: #c9cdff;
   font-weight: 600;
 }
 
 .mention-me {
-  background: rgba(242, 192, 55, 0.35);
+  color: #252a5c;
+  background: #ffe27a;
   border-radius: 4px;
   padding: 0 2px;
 }
 
-.message-mention {
-  background: rgba(242, 192, 55, 0.12);
-  border-left: 3px solid #f2c037;
+.message-mention,
+.message-mention:hover {
+  background: rgba(255, 226, 122, 0.12);
+  border-left: 3px solid #ffe27a;
 }
 </style>

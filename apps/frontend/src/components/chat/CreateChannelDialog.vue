@@ -3,7 +3,7 @@
     <q-card class="create-card">
       <q-card-section>
         <div class="text-h6">Create or join a channel</div>
-        <div class="text-caption text-grey-7">
+        <div class="text-caption muted">
           Same as typing /join name [private] in the command line
         </div>
       </q-card-section>
@@ -19,7 +19,7 @@
             :rules="[isChannelName]"
           />
           <q-toggle v-model="isPrivate" label="Private channel" />
-          <div class="text-caption text-grey-7">
+          <div class="text-caption muted">
             {{
               isPrivate
                 ? "Only people you invite can join."
@@ -32,9 +32,10 @@
           <q-btn v-close-popup flat no-caps label="Cancel" />
           <q-btn
             type="submit"
-            unelevated
+            rounded
+            outline
             no-caps
-            color="primary"
+            color="white"
             label="Create"
           />
         </q-card-actions>
@@ -76,5 +77,11 @@ function reset() {
 .create-card {
   width: 100%;
   max-width: 420px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.muted {
+  opacity: 0.7;
 }
 </style>

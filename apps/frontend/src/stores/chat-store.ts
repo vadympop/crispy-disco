@@ -4,6 +4,7 @@ import { Notify } from "quasar";
 import type {
   Channel,
   Message,
+  ProfileUpdate,
   TypingDraft,
   User,
   UserStatus
@@ -215,6 +216,68 @@ export const useChatStore = defineStore("chat", () => {
     me.value.status = status;
   }
 
+  // Returns false (and notifies) when the new nickname is already taken
+  function updateProfile(profile: ProfileUpdate): boolean {
+    const oldNick = me.value.nickName;
+    const newNick = profile.nickName;
+
+    if (newNick !== oldNick) {
+      // users also holds a copy of me, which doesn't count as taken
+      const taken = users.value.some(
+        user => user.nickName === newNick && user.id !== me.value.id
+      );
+      if (taken) {
+        notifyError(`Nickname ${newNick} is already taken`);
+        return false;
+      }
+      renameNick(oldNick, newNick);
+    }
+
+    me.value.nickName = newNick;
+    me.value.firstName = profile.firstName;
+    me.value.lastName = profile.lastName;
+    if (profile.avatarUrl) {
+      me.value.avatarUrl = profile.avatarUrl;
+    } else {
+      delete me.value.avatarUrl;
+    }
+    notifyInfo("Profile updated");
+    return true;
+  }
+
+  // Everything that references users by nick has to follow the rename.
+  // Old "@nick" mentions inside message texts are left as they were written.
+  function renameNick(oldNick: string, newNick: string) {
+    const rename = (nick: string) => (nick === oldNick ? newNick : nick);
+
+    for (const user of users.value) {
+      user.nickName = rename(user.nickName);
+    }
+
+    for (const list of [
+      ...Object.values(messagesByChannel.value),
+      ...Object.values(serverHistory)
+    ]) {
+      for (const message of list) {
+        message.authorNick = rename(message.authorNick);
+      }
+    }
+    for (const channel of [...channels.value, ...otherChannels.value]) {
+      channel.adminNick = rename(channel.adminNick);
+    }
+    for (const lists of [members.value, bans.value]) {
+      for (const name of Object.keys(lists)) {
+        lists[name] = lists[name]!.map(rename);
+      }
+    }
+    for (const votes of Object.values(kickVotes.value)) {
+      for (const [nick, voters] of Object.entries(votes)) {
+        delete votes[nick];
+        votes[rename(nick)] = voters.map(rename);
+      }
+    }
+  }
+
   function invite(channel: Channel, nick: string) {
     if (!findUser(nick)) {
       notifyError(`User ${nick} does not exist`);
@@ -401,6 +464,7 @@ export const useChatStore = defineStore("chat", () => {
     messagesByChannel,
     sortedChannels,
     findChannel,
+    findUser,
     isAdmin,
     membersOf,
     loadOlder,
@@ -411,6 +475,7 @@ export const useChatStore = defineStore("chat", () => {
     acceptInvite,
     declineInvite,
     setStatus,
+    updateProfile,
     runCommand,
     simulateTyping
   };

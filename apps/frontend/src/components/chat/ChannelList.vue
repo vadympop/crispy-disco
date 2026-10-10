@@ -22,7 +22,7 @@
       class="invite-item q-mx-sm q-mb-xs"
     >
       <q-item-section avatar>
-        <q-icon name="mail" color="warning" />
+        <q-icon name="mail" class="text-disco-yellow" />
       </q-item-section>
       <q-item-section>
         <q-item-label class="text-weight-bold"
@@ -40,7 +40,7 @@
             round
             size="sm"
             icon="check"
-            color="positive"
+            color="green-4"
             aria-label="Accept"
             @click="accept(channel.name)"
           />
@@ -50,7 +50,7 @@
             round
             size="sm"
             icon="close"
-            color="negative"
+            color="red-4"
             aria-label="Decline"
             @click="chat.declineInvite(channel.name)"
           />
@@ -78,7 +78,7 @@
             v-if="chat.isAdmin(channel)"
             name="star"
             size="16px"
-            color="amber"
+            class="text-disco-yellow"
           >
             <q-tooltip>You are the admin</q-tooltip>
           </q-icon>
@@ -104,7 +104,7 @@
                   v-if="chat.isAdmin(channel)"
                   v-close-popup
                   clickable
-                  class="text-negative"
+                  class="text-red-4"
                   @click="remove(channel.name)"
                 >
                   <q-item-section avatar
@@ -120,7 +120,7 @@
     </q-item>
 
     <q-item v-if="joined.length === 0 && invites.length === 0">
-      <q-item-section class="text-grey-7 text-caption">
+      <q-item-section class="text-caption muted">
         No channels yet. Create one or type /join name
       </q-item-section>
     </q-item>
@@ -171,6 +171,7 @@ async function goHomeIfOpen(name: string) {
 .channel-item {
   border-radius: 8px;
   min-height: 40px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .channel-icon {
@@ -178,14 +179,22 @@ async function goHomeIfOpen(name: string) {
 }
 
 .channel-active {
-  background: rgba(80, 91, 163, 0.12);
-  color: #505ba3;
+  background: #505ba3;
+  color: #ffffff;
   font-weight: 600;
 }
 
 .invite-item {
   border-radius: 8px;
-  background: rgba(242, 192, 55, 0.18);
-  border-left: 3px solid #f2c037;
+  background: rgba(255, 226, 122, 0.12);
+  border-left: 3px solid #ffe27a;
+}
+
+.text-disco-yellow {
+  color: #ffe27a;
+}
+
+.muted {
+  opacity: 0.7;
 }
 </style>
