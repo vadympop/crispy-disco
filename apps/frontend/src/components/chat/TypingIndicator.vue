@@ -1,6 +1,6 @@
 <template>
   <!-- Fixed height so the command line doesn't jump when someone starts typing -->
-  <div class="typing-indicator q-px-md text-caption text-grey-8">
+  <div class="typing-indicator q-px-md text-caption">
     <template v-if="chat.typing.length > 0">
       <q-spinner-dots size="14px" class="q-mr-xs" />
       <template v-for="(draft, i) in chat.typing" :key="draft.nickName">
@@ -10,7 +10,7 @@
           <!-- Clicking the nick shows what they are writing, updated live -->
           <q-menu anchor="top left" self="bottom left" :offset="[0, 6]">
             <q-card class="draft-card">
-              <q-card-section class="q-pb-none text-caption text-grey-7">
+              <q-card-section class="q-pb-none text-caption draft-label">
                 {{ draft.nickName }} is writing…
               </q-card-section>
               <q-card-section class="draft-text">
@@ -45,6 +45,7 @@ onUnmounted(() => {
 
 <style scoped>
 .typing-indicator {
+  opacity: 0.8;
   height: 22px;
   line-height: 22px;
   white-space: nowrap;
@@ -60,6 +61,12 @@ onUnmounted(() => {
 
 .draft-card {
   max-width: 320px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+}
+
+.draft-label {
+  opacity: 0.7;
 }
 
 .draft-text {

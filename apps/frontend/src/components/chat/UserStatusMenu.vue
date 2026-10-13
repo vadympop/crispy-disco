@@ -1,15 +1,14 @@
 <template>
   <q-item clickable class="status-bar">
     <q-item-section avatar>
-      <q-avatar color="primary" text-color="white" size="36px">
-        {{ chat.me.nickName.charAt(0).toUpperCase() }}
+      <UserAvatar :nick-name="chat.me.nickName">
         <q-badge
           floating
           rounded
           class="status-dot"
           :style="{ background: current.color }"
         />
-      </q-avatar>
+      </UserAvatar>
     </q-item-section>
     <q-item-section>
       <q-item-label class="text-weight-bold">{{
@@ -18,7 +17,17 @@
       <q-item-label caption>{{ current.label }}</q-item-label>
     </q-item-section>
     <q-item-section side>
-      <q-icon name="settings" />
+      <!-- .stop: the gear opens the full settings, not the quick menu -->
+      <q-btn
+        flat
+        dense
+        round
+        icon="settings"
+        aria-label="Settings"
+        @click.stop="settingsOpen = true"
+      >
+        <q-tooltip>Settings</q-tooltip>
+      </q-btn>
     </q-item-section>
 
     <q-menu anchor="top left" self="bottom left" :offset="[0, 8]">
@@ -61,28 +70,39 @@
 
         <q-separator />
 
-        <q-item v-close-popup clickable class="text-negative" to="/">
+        <q-item v-close-popup clickable @click="settingsOpen = true">
+          <q-item-section avatar><q-icon name="settings" /></q-item-section>
+          <q-item-section>All settings</q-item-section>
+        </q-item>
+
+        <q-item v-close-popup clickable class="text-red-4" to="/">
           <q-item-section avatar><q-icon name="logout" /></q-item-section>
           <q-item-section>Log out</q-item-section>
         </q-item>
       </q-list>
     </q-menu>
+
+    <ProfileSettingsDialog v-model="settingsOpen" />
   </q-item>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useChatStore } from "@/stores/chat-store";
 import { STATUS_OPTIONS, statusOption } from "@/lib/status";
+import UserAvatar from "@/components/chat/UserAvatar.vue";
+import ProfileSettingsDialog from "@/components/chat/ProfileSettingsDialog.vue";
 
 const chat = useChatStore();
+
+const settingsOpen = ref(false);
 
 const current = computed(() => statusOption(chat.me.status));
 </script>
 
 <style scoped>
 .status-bar {
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .status-dot {
@@ -90,7 +110,7 @@ const current = computed(() => statusOption(chat.me.status));
   height: 12px;
   min-height: 0;
   padding: 0;
-  border: 2px solid white;
+  border: 2px solid #252a5c;
   top: auto;
   bottom: -2px;
   right: -2px;

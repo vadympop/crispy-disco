@@ -4,8 +4,10 @@ import { Notify } from "quasar";
 import type {
   Channel,
   Message,
+  ProfileUpdate,
   TypingDraft,
   User,
+  UserStats,
   UserStatus
 } from "@/types/chat";
 import { parseCommand } from "@/lib/commands";
@@ -76,6 +78,24 @@ export const useChatStore = defineStore("chat", () => {
     return users.value.find(user => user.nickName === nickName);
   }
 
+  // Direct chats are titled with the other person's name, channels with theirs
+  function channelTitle(channel: Channel): string {
+    if (!channel.directWith) {
+      return channel.name;
+    }
+    const user = findUser(channel.directWith);
+    return user ? `${user.firstName} ${user.lastName}` : channel.directWith;
+  }
+
+  // How a channel is referred to in sentences: "#general" or "Ed Horvath"
+  function channelLabel(name: string): string {
+    const channel = findChannel(name);
+    if (!channel) {
+      return `#${name}`;
+    }
+    return channel.directWith ? channelTitle(channel) : `#${channel.name}`;
+  }
+
   function isAdmin(channel: Channel) {
     return channel.adminNick === me.value.nickName;
   }
@@ -116,6 +136,8 @@ export const useChatStore = defineStore("chat", () => {
     };
     const loaded = messagesByChannel.value[channelName] ?? [];
     messagesByChannel.value[channelName] = [...loaded, message];
+    // the fake server keeps it too, so it counts in the user stats
+    (serverHistory[channelName] ??= []).push(message);
     channel.lastMessageAt = message.createdAt;
   }
 
@@ -159,6 +181,47 @@ export const useChatStore = defineStore("chat", () => {
     return true;
   }
 
+  // Opens the private chat with `nick`, creating it the first time.
+  // Returns the channel name to navigate to.
+  function startDirectChat(nick: string): string {
+    const existing = channels.value.find(c => c.directWith === nick);
+    if (existing) {
+      return existing.name;
+    }
+
+    // "@" can't appear in channel names, so this never clashes with /join
+    const name = `@${nick}`;
+    channels.value.push({
+      name,
+      isPrivate: true,
+      adminNick: me.value.nickName,
+      invited: false,
+      lastMessageAt: new Date().toISOString(),
+      directWith: nick
+    });
+    members.value[name] = [me.value.nickName, nick];
+    return name;
+  }
+
+  function userStats(nick: string): UserStats {
+    let messageCount = 0;
+    for (const history of Object.values(serverHistory)) {
+      messageCount += history.filter(m => m.authorNick === nick).length;
+    }
+
+    const sharedChannels = channels.value
+      .filter(
+        c =>
+          !c.invited &&
+          !c.directWith &&
+          members.value[c.name]?.includes(nick) &&
+          members.value[c.name]?.includes(me.value.nickName)
+      )
+      .map(c => c.name);
+
+    return { messageCount, sharedChannels };
+  }
+
   function removeChannel(name: string) {
     channels.value = channels.value.filter(channel => channel.name !== name);
   }
@@ -196,7 +259,11 @@ export const useChatStore = defineStore("chat", () => {
     removeChannel(name);
     delete members.value[name];
     delete messagesByChannel.value[name];
-    notifyInfo(`#${name} was deleted`);
+    notifyInfo(
+      channel.directWith
+        ? `Chat with ${channelTitle(channel)} was deleted`
+        : `#${name} was deleted`
+    );
   }
 
   function acceptInvite(name: string) {
@@ -213,6 +280,68 @@ export const useChatStore = defineStore("chat", () => {
 
   function setStatus(status: UserStatus) {
     me.value.status = status;
+  }
+
+  // Returns false (and notifies) when the new nickname is already taken
+  function updateProfile(profile: ProfileUpdate): boolean {
+    const oldNick = me.value.nickName;
+    const newNick = profile.nickName;
+
+    if (newNick !== oldNick) {
+      // users also holds a copy of me, which doesn't count as taken
+      const taken = users.value.some(
+        user => user.nickName === newNick && user.id !== me.value.id
+      );
+      if (taken) {
+        notifyError(`Nickname ${newNick} is already taken`);
+        return false;
+      }
+      renameNick(oldNick, newNick);
+    }
+
+    me.value.nickName = newNick;
+    me.value.firstName = profile.firstName;
+    me.value.lastName = profile.lastName;
+    if (profile.avatarUrl) {
+      me.value.avatarUrl = profile.avatarUrl;
+    } else {
+      delete me.value.avatarUrl;
+    }
+    notifyInfo("Profile updated");
+    return true;
+  }
+
+  // Everything that references users by nick has to follow the rename.
+  // Old "@nick" mentions inside message texts are left as they were written.
+  function renameNick(oldNick: string, newNick: string) {
+    const rename = (nick: string) => (nick === oldNick ? newNick : nick);
+
+    for (const user of users.value) {
+      user.nickName = rename(user.nickName);
+    }
+
+    for (const list of [
+      ...Object.values(messagesByChannel.value),
+      ...Object.values(serverHistory)
+    ]) {
+      for (const message of list) {
+        message.authorNick = rename(message.authorNick);
+      }
+    }
+    for (const channel of [...channels.value, ...otherChannels.value]) {
+      channel.adminNick = rename(channel.adminNick);
+    }
+    for (const lists of [members.value, bans.value]) {
+      for (const name of Object.keys(lists)) {
+        lists[name] = lists[name]!.map(rename);
+      }
+    }
+    for (const votes of Object.values(kickVotes.value)) {
+      for (const [nick, voters] of Object.entries(votes)) {
+        delete votes[nick];
+        votes[rename(nick)] = voters.map(rename);
+      }
+    }
   }
 
   function invite(channel: Channel, nick: string) {
@@ -330,6 +459,13 @@ export const useChatStore = defineStore("chat", () => {
       return {};
     }
 
+    // A direct chat always stays between the two of you
+    const isMembership = ["invite", "revoke", "kick"].includes(command.name);
+    if (channel.directWith && isMembership) {
+      notifyError(`/${command.name} is not available in a direct chat`);
+      return {};
+    }
+
     switch (command.name) {
       case "invite":
       case "revoke":
@@ -401,6 +537,9 @@ export const useChatStore = defineStore("chat", () => {
     messagesByChannel,
     sortedChannels,
     findChannel,
+    findUser,
+    channelTitle,
+    channelLabel,
     isAdmin,
     membersOf,
     loadOlder,
@@ -409,8 +548,11 @@ export const useChatStore = defineStore("chat", () => {
     leaveChannel,
     deleteChannel,
     acceptInvite,
+    startDirectChat,
+    userStats,
     declineInvite,
     setStatus,
+    updateProfile,
     runCommand,
     simulateTyping
   };

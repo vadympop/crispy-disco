@@ -1,17 +1,17 @@
 <template>
   <q-page padding class="welcome-page">
     <div class="welcome-content">
-      <div class="text-h4 text-weight-bold q-mb-xs">
+      <div class="welcome-title text-weight-bold q-mb-xs">
         Welcome, {{ chat.me.firstName }}! 👋
       </div>
-      <div class="text-body1 text-grey-8 q-mb-lg">
+      <div class="welcome-subtitle text-body1 q-mb-lg">
         Pick a channel on the left, or type
         <code>/join channelName</code> in the command line below.
       </div>
 
-      <q-card v-if="invites.length > 0" flat bordered class="q-mb-md">
+      <q-card v-if="invites.length > 0" flat class="welcome-card q-mb-md">
         <q-card-section class="text-subtitle1 text-weight-bold">
-          <q-icon name="mail" color="warning" class="q-mr-xs" />
+          <q-icon name="mail" class="q-mr-xs" style="color: #ffe27a" />
           Pending invitations
         </q-card-section>
         <q-list separator>
@@ -30,12 +30,13 @@
                   @click="chat.declineInvite(channel.name)"
                 />
                 <q-btn
-                  unelevated
+                  rounded
+                  outline
                   dense
                   no-caps
-                  color="primary"
+                  color="white"
                   label="Accept"
-                  class="q-px-sm"
+                  class="q-px-md"
                   @click="accept(channel.name)"
                 />
               </div>
@@ -44,22 +45,22 @@
         </q-list>
       </q-card>
 
-      <q-card flat bordered>
+      <q-card flat class="welcome-card">
         <q-card-section class="text-subtitle1 text-weight-bold">
           <q-icon name="terminal" class="q-mr-xs" />
           Commands
         </q-card-section>
-        <q-markup-table flat dense wrap-cells>
+        <q-markup-table flat dense wrap-cells class="commands-table">
           <tbody>
             <tr v-for="command in COMMANDS" :key="command.usage">
               <td
                 ><code>{{ command.usage }}</code></td
               >
-              <td class="text-grey-8">{{ command.description }}</td>
+              <td class="muted">{{ command.description }}</td>
             </tr>
             <tr>
               <td><code>@nickName</code></td>
-              <td class="text-grey-8">Mention someone in a message</td>
+              <td class="muted">Mention someone in a message</td>
             </tr>
           </tbody>
         </q-markup-table>
@@ -90,5 +91,34 @@ async function accept(name: string) {
   max-width: 720px;
   margin: 0 auto;
   padding-top: 24px;
+  color: #ffffff;
+}
+
+.welcome-title {
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.welcome-subtitle,
+.muted {
+  opacity: 0.85;
+}
+
+/* same look as the feature cards on the landing */
+.welcome-card {
+  border-radius: 12px;
+  background: #252a5c;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.commands-table {
+  background: transparent;
+}
+
+code {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
 }
 </style>

@@ -1,8 +1,8 @@
 <template>
   <!-- "lFf": the drawer owns the bottom-left corner, so the command line
        footer sits next to the channel list instead of under it -->
-  <q-layout view="hHh LpR lFf" class="bg-grey-1">
-    <q-header bordered class="bg-white text-dark">
+  <q-layout view="hHh LpR lFf" class="chat-layout">
+    <q-header class="chat-header">
       <q-toolbar>
         <!-- The only way to hide/show the channel list (like Telegram / Claude web) -->
         <q-btn
@@ -15,23 +15,33 @@
         />
 
         <q-toolbar-title v-if="channel" class="row items-center no-wrap">
+          <UserAvatar
+            v-if="channel.directWith"
+            :nick-name="channel.directWith"
+            size="28px"
+            class="q-mr-sm cursor-pointer"
+          >
+            <UserProfileMenu :nick-name="channel.directWith" />
+          </UserAvatar>
           <q-icon
+            v-else
             :name="channel.isPrivate ? 'lock' : 'tag'"
             size="22px"
             class="q-mr-xs"
           />
-          <span class="ellipsis">{{ channel.name }}</span>
+          <span class="ellipsis">{{ chat.channelTitle(channel) }}</span>
           <q-badge
-            v-if="chat.isAdmin(channel)"
-            color="amber"
+            v-if="chat.isAdmin(channel) && !channel.directWith"
             text-color="dark"
             label="admin"
-            class="q-ml-sm"
+            class="admin-badge q-ml-sm"
           />
         </q-toolbar-title>
-        <q-toolbar-title v-else class="text-weight-bold"
-          >crispy-disco</q-toolbar-title
-        >
+        <!-- the drawer already shows the brand, so the header names the screen -->
+        <q-toolbar-title v-else class="row items-center no-wrap">
+          <q-icon name="home" size="22px" class="q-mr-xs" />
+          <span>Home</span>
+        </q-toolbar-title>
 
         <q-btn
           v-if="channel"
@@ -50,11 +60,17 @@
     <q-drawer
       v-model="drawerOpen"
       show-if-above
-      bordered
       :width="280"
-      class="bg-white"
+      class="chat-drawer"
     >
       <div class="column fit no-wrap">
+        <router-link
+          to="/channels"
+          class="drawer-brand row items-center no-wrap"
+        >
+          <DiscoBallLogo :size="30" class="q-mr-sm" />
+          <span class="text-subtitle1 text-weight-bold">crispy-disco</span>
+        </router-link>
         <div class="col scroll">
           <ChannelList />
         </div>
@@ -63,7 +79,7 @@
     </q-drawer>
 
     <!-- The command line is a fixed element of the app, visible on every chat screen -->
-    <q-footer bordered class="bg-grey-1 text-dark">
+    <q-footer class="chat-footer">
       <TypingIndicator v-if="channel" :key="channel.name" />
       <div v-else class="typing-placeholder" />
       <CommandLine
@@ -85,10 +101,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useQuasar } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
+import DiscoBallLogo from "@/components/DiscoBallLogo.vue";
+import UserAvatar from "@/components/chat/UserAvatar.vue";
+import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
 import ChannelList from "@/components/chat/ChannelList.vue";
 import UserStatusMenu from "@/components/chat/UserStatusMenu.vue";
 import TypingIndicator from "@/components/chat/TypingIndicator.vue";
@@ -98,6 +117,21 @@ import MembersDialog from "@/components/chat/MembersDialog.vue";
 const $q = useQuasar();
 const route = useRoute();
 const chat = useChatStore();
+
+// The chat screens use the landing palette through Quasar's dark mode
+// ($dark / $dark-page in quasar.variables.scss), so menus and dialogs match too.
+// The root background covers macOS rubber-band overscroll, as on the landing.
+const CHAT_BG = "#252a5c";
+
+onMounted(() => {
+  $q.dark.set(true);
+  document.documentElement.style.backgroundColor = CHAT_BG;
+});
+
+onBeforeUnmount(() => {
+  $q.dark.set(false);
+  document.documentElement.style.backgroundColor = "";
+});
 
 const drawerOpen = ref(false);
 const membersOpen = ref(false);
@@ -123,6 +157,41 @@ watch(
 </script>
 
 <style scoped>
+.chat-header,
+.chat-drawer,
+.chat-footer {
+  background: #252a5c;
+  color: #ffffff;
+}
+
+.chat-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.chat-drawer {
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.chat-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* same solid purple as the landing hero and the auth page */
+.chat-layout :deep(.q-page-container) {
+  background: #505ba3;
+}
+
+.drawer-brand {
+  padding: 14px 16px;
+  color: #ffffff;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-badge {
+  background: #ffe27a;
+}
+
 .typing-placeholder {
   height: 22px;
 }
