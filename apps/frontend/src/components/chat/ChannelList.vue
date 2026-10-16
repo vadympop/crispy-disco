@@ -76,7 +76,7 @@
         <div class="row no-wrap items-center">
           <q-icon
             v-if="chat.isAdmin(channel) && !channel.directWith"
-            name="star"
+            name="shield"
             size="16px"
             class="text-disco-yellow"
           >
