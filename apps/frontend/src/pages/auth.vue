@@ -42,12 +42,10 @@
     justify-content: center;
   }
 
-  /* full-width button is easier to tap */
   .auth-page :deep(.auth-btn) {
     width: 100%;
   }
 
-  /* 16px inputs stop iOS Safari from zooming in on focus */
   .auth-page :deep(.q-field__native) {
     font-size: 16px;
   }

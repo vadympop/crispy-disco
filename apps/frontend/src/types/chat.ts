@@ -1,6 +1,3 @@
-// Shared shapes for the chat UI. They mirror what the backend will send
-// later, so the components don't have to change when mocks are replaced.
-
 export type UserStatus = "online" | "dnd" | "offline";
 
 export interface User {

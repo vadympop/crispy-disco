@@ -1,6 +1,5 @@
 <template>
   <div class="command-line q-px-md q-pb-sm">
-    <!-- Command suggestions while the user types "/..." -->
     <div v-if="showSuggestions" class="suggestions q-mb-xs">
       <q-list ref="suggestionList" dense class="suggestion-items">
         <q-item
@@ -81,7 +80,7 @@ const dismissed = ref(false);
 
 const isCommand = computed(() => text.value.trimStart().startsWith("/"));
 
-// Without an open channel only commands make sense (e.g. /join)
+// Without an open channel only commands make sense
 const canSend = computed(
   () => text.value.trim() !== "" && (isCommand.value || props.channel !== null)
 );
@@ -132,8 +131,8 @@ function moveActive(step: number) {
   activeIndex.value = (activeIndex.value + step + count) % count;
 }
 
-// While suggestions are open: arrows move, Enter/Tab pick, Esc closes.
-// Otherwise Enter sends and Shift+Enter inserts a new line.
+// While suggestions are open: arrows move, Enter/Tab pick, Esc closes
+// Otherwise Enter sends and Shift+Enter inserts a new line
 function onKeydown(event: KeyboardEvent) {
   if (showSuggestions.value) {
     const active = suggestions.value[activeIndex.value];
@@ -186,7 +185,6 @@ async function submit() {
   text.value = "";
 
   if (!value.startsWith("/")) {
-    // canSend guarantees a channel is open for plain messages
     chat.sendMessage(props.channel!, value);
     return;
   }
@@ -242,7 +240,6 @@ kbd {
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* 16px stops iOS Safari from zooming in on focus */
 .command-input :deep(textarea) {
   font-size: 16px;
   max-height: 120px;

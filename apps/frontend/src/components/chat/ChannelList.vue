@@ -192,7 +192,6 @@ async function goHomeIfOpen(name: string) {
   min-width: 32px;
 }
 
-/* the circle avatar is a bit heavy at this size, the font follows it */
 .dm-avatar {
   font-size: 11px;
 }

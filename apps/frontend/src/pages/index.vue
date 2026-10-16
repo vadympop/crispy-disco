@@ -56,12 +56,13 @@
           </div>
 
           <div class="landing-container text-center">
-            <h3 class="hero-title">A place for your gang to talk with huzz</h3>
+            <h3 class="hero-title">A place for your gang to yap</h3>
             <p class="hero-subtitle">
-              Introducing the world's first messenger where you can see what
+              Introducing the world-class messenger where you can see what
               your friends think, not what they send you. It comes with a purple
               theme that makes you feel like you're in a club, making your
-              communication easy and honest.
+              communication easy and honest. Think Slack, but without the
+              corporate bullshit, fake productivity, and pretending to care about synergy.
             </p>
           </div>
 
@@ -101,8 +102,6 @@
 import { onBeforeUnmount, onMounted } from "vue";
 import DiscoBallLogo from "@/components/DiscoBallLogo.vue";
 
-// macOS rubber-band overscroll reveals the root background, which is white
-// by default. Match it to the header/footer while this page is open.
 const LANDING_BG = "#252a5c";
 
 onMounted(() => {
@@ -186,7 +185,6 @@ const features: Feature[] = [
   opacity: 0.85;
 }
 
-/* the arrow tip sits right under the Log in / Register buttons */
 .hero-pointer-arrow {
   top: -98px;
   right: 72px;

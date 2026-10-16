@@ -43,7 +43,6 @@ const props = defineProps<{ message: Message }>();
 
 const chat = useChatStore();
 
-// Splitting with a capture group keeps the "@nick" pieces in the result:
 // "hi @ed !" -> ["hi ", "@ed", " !"]
 const parts = computed(() =>
   props.message.text.split(/(@[\w.-]+)/).filter(part => part !== "")

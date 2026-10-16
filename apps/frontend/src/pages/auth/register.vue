@@ -109,7 +109,6 @@ const minLength = (n: number) => (val: string) =>
 const matchesPassword = (val: string) =>
   val === form.password || "Passwords do not match";
 
-// TODO: replace with a real API call once the backend is ready
 async function onSubmit() {
   loading.value = true;
   await new Promise(resolve => setTimeout(resolve, 500));

@@ -4,7 +4,6 @@
   <q-layout view="hHh LpR lFf" class="chat-layout">
     <q-header class="chat-header">
       <q-toolbar>
-        <!-- The only way to hide/show the channel list (like Telegram / Claude web) -->
         <q-btn
           flat
           dense
@@ -37,7 +36,7 @@
             class="admin-badge q-ml-sm"
           />
         </q-toolbar-title>
-        <!-- the drawer already shows the brand, so the header names the screen -->
+
         <q-toolbar-title v-else class="row items-center no-wrap">
           <q-icon name="home" size="22px" class="q-mr-xs" />
           <span>Home</span>
@@ -144,7 +143,7 @@ const channel = computed(() => {
 });
 
 // On small screens the drawer covers the chat: show it on the welcome
-// screen and hide it once a channel is opened. Desktop keeps it as is.
+// screen and hide it once a channel is opened
 watch(
   () => route.path,
   path => {
@@ -176,7 +175,6 @@ watch(
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* same solid purple as the landing hero and the auth page */
 .chat-layout :deep(.q-page-container) {
   background: #505ba3;
 }

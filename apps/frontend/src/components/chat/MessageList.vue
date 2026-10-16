@@ -50,7 +50,7 @@ const beginning = computed(() => {
 const messages = computed(() => chat.messagesByChannel[props.channel] ?? []);
 
 function onLoad(_index: number, done: (stop?: boolean) => void) {
-  // fake network delay so the loading spinner is visible
+  // test loading spinner with fake delay
   setTimeout(() => {
     hasMore.value = chat.loadOlder(props.channel);
     done(!hasMore.value);
@@ -79,7 +79,6 @@ watch(
   opacity: 0.6;
 }
 
-/* the parent gives the height (flex "col"), min-height: 0 lets it shrink */
 .message-scroll {
   min-height: 0;
   overflow-y: auto;

@@ -163,8 +163,8 @@ const fileInput = useTemplateRef<HTMLInputElement>("fileInput");
 // Pictures are scaled down before they are kept, so the store stays small
 const AVATAR_SIZE = 160;
 
-// Nothing is applied until Save; Cancel or closing throws the draft away.
-// avatarUrl "" means "no picture" (removed).
+// Nothing is applied until Save; Cancel or closing throws the draft away
+// avatarUrl "" means "no picture"
 const form = reactive({
   nickName: "",
   firstName: "",
@@ -192,11 +192,13 @@ const isNickName = (val: string) =>
 async function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
-  // let the same file be picked again after "Remove picture"
+
+  // Reset the input to allow the same file to be picked again
   input.value = "";
   if (!file) {
     return;
   }
+
   if (!file.type.startsWith("image/")) {
     Notify.create({ type: "negative", message: "Pick an image file" });
     return;
@@ -259,7 +261,6 @@ function onSubmit() {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* the body scrolls on short screens, the Save row stays visible */
 .settings-body {
   max-height: 65vh;
   overflow-y: auto;
@@ -300,7 +301,6 @@ function onSubmit() {
   opacity: 0.7;
 }
 
-/* phones: names stack, 16px inputs stop iOS Safari from zooming on focus */
 @media (max-width: 599px) {
   .name-row {
     grid-template-columns: 1fr;
