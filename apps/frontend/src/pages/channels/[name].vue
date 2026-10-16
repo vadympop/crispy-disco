@@ -59,10 +59,4 @@ function fitHeight(offset: number, height: number) {
 .muted {
   opacity: 0.7;
 }
-
-code {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  padding: 1px 5px;
-}
 </style>

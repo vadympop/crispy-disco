@@ -270,18 +270,18 @@ function onSubmit() {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.6;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-sm);
 }
 
 .name-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--space-md);
 }
 
 .option-list {
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -292,7 +292,7 @@ function onSubmit() {
 
 .settings-actions {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 12px;
+  padding-top: var(--space-md);
 }
 
 .muted {

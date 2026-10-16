@@ -11,17 +11,18 @@
 <style scoped>
 .auth-page {
   background: #505ba3;
-  padding: 16px;
+  padding: var(--space-md);
 }
 
 /* tablets and desktops: a bit more breathing room inside the card */
 @media (min-width: 600px) {
   .auth-page {
-    padding: 32px;
+    padding: var(--space-lg);
   }
 
   .auth-page :deep(.auth-card) {
-    padding: 8px 16px;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
   }
 }
 

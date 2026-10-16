@@ -126,7 +126,7 @@ async function onSubmit() {
 .name-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-md);
 }
 
 @media (max-width: 599px) {

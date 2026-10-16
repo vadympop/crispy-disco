@@ -203,7 +203,7 @@ async function submit() {
 .suggestions {
   background: #2f3572;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -218,7 +218,7 @@ async function submit() {
 }
 
 .suggestion-hint {
-  padding: 6px 12px;
+  padding: var(--space-xs) var(--space-md);
   font-size: 0.75rem;
   opacity: 0.7;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
@@ -228,9 +228,9 @@ kbd {
   display: inline-block;
   min-width: 18px;
   margin: 0 2px;
-  padding: 0 4px;
+  padding: 0 var(--space-xs);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.7rem;
   text-align: center;

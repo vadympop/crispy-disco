@@ -83,8 +83,8 @@ const time = computed(() => date.formatDate(props.message.createdAt, "HH:mm"));
 .mention-me {
   color: #252a5c;
   background: #ffe27a;
-  border-radius: 4px;
-  padding: 0 2px;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-xs);
 }
 
 .message-mention,

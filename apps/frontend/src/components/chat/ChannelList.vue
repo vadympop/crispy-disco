@@ -78,7 +78,7 @@
             v-if="chat.isAdmin(channel) && !channel.directWith"
             name="shield"
             size="16px"
-            class="text-disco-yellow"
+            class="text-disco-yellow q-mr-xs"
           >
             <q-tooltip>You are the admin</q-tooltip>
           </q-icon>
@@ -173,7 +173,7 @@ async function goHomeIfOpen(name: string) {
 
 <style scoped>
 .channel-item {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   min-height: 40px;
   color: rgba(255, 255, 255, 0.8);
 }
@@ -193,7 +193,7 @@ async function goHomeIfOpen(name: string) {
 }
 
 .invite-item {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(255, 226, 122, 0.12);
   border-left: 3px solid #ffe27a;
 }

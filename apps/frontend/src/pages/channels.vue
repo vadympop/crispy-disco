@@ -180,7 +180,7 @@ watch(
 }
 
 .drawer-brand {
-  padding: 14px 16px;
+  padding: var(--space-md);
   color: #ffffff;
   text-decoration: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);

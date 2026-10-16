@@ -164,8 +164,8 @@ const features: Feature[] = [
 .landing-container {
   max-width: 1100px;
   margin: 0 auto;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: var(--space-md);
+  padding-right: var(--space-md);
 }
 
 .hero {
@@ -202,7 +202,7 @@ const features: Feature[] = [
   font-size: clamp(2rem, 6vw, 3.5rem);
   line-height: 1.15;
   font-weight: 700;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-md);
 }
 
 .hero-subtitle {
@@ -216,17 +216,17 @@ const features: Feature[] = [
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .features {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .feature-card {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: #252a5c;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.2);
