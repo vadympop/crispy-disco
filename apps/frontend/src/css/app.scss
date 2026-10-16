@@ -25,3 +25,29 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
 }
+
+// Thin, translucent scrollbars for every scroll container
+// https://developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+// Fallback for Safari, which has no scrollbar-color yet
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
