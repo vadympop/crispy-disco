@@ -139,7 +139,6 @@
             no-caps
             color="white"
             label="Save"
-            class="q-px-md"
           />
         </q-card-actions>
       </q-form>
