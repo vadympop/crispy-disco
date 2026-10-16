@@ -16,12 +16,18 @@
     </q-item-label>
 
     <!-- Invites: highlighted and always on top (sortedChannels puts them first) -->
-    <q-item v-for="channel in invites" :key="channel.name" class="invite-item q-mx-sm q-mb-xs">
+    <q-item
+      v-for="channel in invites"
+      :key="channel.name"
+      class="invite-item q-mx-sm q-mb-xs"
+    >
       <q-item-section avatar>
         <q-icon name="mail" class="text-disco-yellow" />
       </q-item-section>
       <q-item-section>
-        <q-item-label class="text-weight-bold"> #{{ channel.name }} </q-item-label>
+        <q-item-label class="text-weight-bold">
+          #{{ channel.name }}
+        </q-item-label>
         <q-item-label caption class="muted">
           Invitation from {{ channel.adminNick }}
         </q-item-label>
@@ -100,7 +106,9 @@
                   clickable
                   @click="leave(channel.name)"
                 >
-                  <q-item-section avatar><q-icon name="logout" /></q-item-section>
+                  <q-item-section avatar
+                    ><q-icon name="logout"
+                  /></q-item-section>
                   <q-item-section>Leave channel</q-item-section>
                 </q-item>
                 <q-item
@@ -110,9 +118,11 @@
                   class="text-red-4"
                   @click="remove(channel.name)"
                 >
-                  <q-item-section avatar><q-icon name="delete" /></q-item-section>
+                  <q-item-section avatar
+                    ><q-icon name="delete"
+                  /></q-item-section>
                   <q-item-section>{{
-                    channel.directWith ? 'Delete chat' : 'Delete channel'
+                    channel.directWith ? "Delete chat" : "Delete channel"
                   }}</q-item-section>
                 </q-item>
               </q-list>
@@ -133,40 +143,40 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useChatStore } from '@/stores/chat-store'
-import CreateChannelDialog from '@/components/chat/CreateChannelDialog.vue'
-import UserAvatar from '@/components/chat/UserAvatar.vue'
+import { computed, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useChatStore } from "@/stores/chat-store";
+import CreateChannelDialog from "@/components/chat/CreateChannelDialog.vue";
+import UserAvatar from "@/components/chat/UserAvatar.vue";
 
-const chat = useChatStore()
-const route = useRoute()
-const router = useRouter()
+const chat = useChatStore();
+const route = useRoute();
+const router = useRouter();
 
-const createOpen = ref(false)
+const createOpen = ref(false);
 
-const invites = computed(() => chat.sortedChannels.filter((c) => c.invited))
-const joined = computed(() => chat.sortedChannels.filter((c) => !c.invited))
+const invites = computed(() => chat.sortedChannels.filter(c => c.invited));
+const joined = computed(() => chat.sortedChannels.filter(c => !c.invited));
 
 async function accept(name: string) {
-  chat.acceptInvite(name)
-  await router.push(`/channels/${name}`)
+  chat.acceptInvite(name);
+  await router.push(`/channels/${name}`);
 }
 
 // After leaving/deleting the open channel, go back to the welcome screen
 async function leave(name: string) {
-  chat.leaveChannel(name)
-  await goHomeIfOpen(name)
+  chat.leaveChannel(name);
+  await goHomeIfOpen(name);
 }
 
 async function remove(name: string) {
-  chat.deleteChannel(name)
-  await goHomeIfOpen(name)
+  chat.deleteChannel(name);
+  await goHomeIfOpen(name);
 }
 
 async function goHomeIfOpen(name: string) {
   if (!chat.findChannel(name) && route.path === `/channels/${name}`) {
-    await router.push('/channels')
+    await router.push("/channels");
   }
 }
 </script>

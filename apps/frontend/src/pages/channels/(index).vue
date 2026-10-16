@@ -1,13 +1,19 @@
 <template>
   <q-page padding class="welcome-page">
     <div class="welcome-content">
-      <div class="welcome-title text-weight-bold q-mb-xs">Welcome, {{ chat.me.firstName }}! 👋</div>
+      <div class="welcome-title text-weight-bold q-mb-xs"
+        >Welcome, {{ chat.me.firstName }}! 👋</div
+      >
       <div class="welcome-subtitle text-body1 q-mb-lg">
         Pick a channel on the left, or type
         <code>/join channelName</code> in the command line below.
       </div>
 
-      <q-card v-if="invites.length > 0" flat class="welcome-card q-mb-md q-pb-sm">
+      <q-card
+        v-if="invites.length > 0"
+        flat
+        class="welcome-card q-mb-md q-pb-sm"
+      >
         <q-card-section class="text-subtitle1 text-weight-bold">
           <q-icon name="mail" class="q-mr-xs" style="color: #ffe27a" />
           Pending invitations
@@ -68,19 +74,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { COMMANDS } from '@/lib/commands'
-import { useChatStore } from '@/stores/chat-store'
+import { computed } from "vue";
+import { useRouter } from "vue-router";
+import { COMMANDS } from "@/lib/commands";
+import { useChatStore } from "@/stores/chat-store";
 
-const chat = useChatStore()
-const router = useRouter()
+const chat = useChatStore();
+const router = useRouter();
 
-const invites = computed(() => chat.sortedChannels.filter((c) => c.invited))
+const invites = computed(() => chat.sortedChannels.filter(c => c.invited));
 
 async function accept(name: string) {
-  chat.acceptInvite(name)
-  await router.push(`/channels/${name}`)
+  chat.acceptInvite(name);
+  await router.push(`/channels/${name}`);
 }
 </script>
 

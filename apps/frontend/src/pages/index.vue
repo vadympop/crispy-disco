@@ -58,11 +58,12 @@
           <div class="landing-container text-center">
             <h3 class="hero-title">A place for your gang to yap</h3>
             <p class="hero-subtitle">
-              Introducing the world-class messenger where you can see what
-              your friends think, not what they send you. It comes with a purple
+              Introducing the world-class messenger where you can see what your
+              friends think, not what they send you. It comes with a purple
               theme that makes you feel like you're in a club, making your
               communication easy and honest. Think Slack, but without the
-              corporate bullshit, fake productivity, and pretending to care about synergy.
+              corporate bullshit, fake productivity, and pretending to care
+              about synergy.
             </p>
           </div>
 

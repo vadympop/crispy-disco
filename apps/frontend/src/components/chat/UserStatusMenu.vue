@@ -2,11 +2,18 @@
   <q-item clickable class="status-bar">
     <q-item-section avatar>
       <UserAvatar :nick-name="chat.me.nickName">
-        <q-badge floating rounded class="status-dot" :style="{ background: current.color }" />
+        <q-badge
+          floating
+          rounded
+          class="status-dot"
+          :style="{ background: current.color }"
+        />
       </UserAvatar>
     </q-item-section>
     <q-item-section>
-      <q-item-label class="text-weight-bold">{{ chat.me.nickName }}</q-item-label>
+      <q-item-label class="text-weight-bold">{{
+        chat.me.nickName
+      }}</q-item-label>
       <q-item-label caption class="muted">{{ current.label }}</q-item-label>
     </q-item-section>
     <q-item-section side>
@@ -36,7 +43,11 @@
           @click="chat.setStatus(option.value)"
         >
           <q-item-section avatar>
-            <q-icon name="circle" size="14px" :style="{ color: option.color }" />
+            <q-icon
+              name="circle"
+              size="14px"
+              :style="{ color: option.color }"
+            />
           </q-item-section>
           <q-item-section>
             <q-item-label>{{ option.label }}</q-item-label>
@@ -49,7 +60,9 @@
         <q-item tag="label">
           <q-item-section>
             <q-item-label>Notify only for mentions</q-item-label>
-            <q-item-label caption>Ignore messages without @{{ chat.me.nickName }}</q-item-label>
+            <q-item-label caption
+              >Ignore messages without @{{ chat.me.nickName }}</q-item-label
+            >
           </q-item-section>
           <q-item-section side>
             <q-toggle v-model="chat.notifyMentionsOnly" />
@@ -75,17 +88,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useChatStore } from '@/stores/chat-store'
-import { STATUS_OPTIONS, statusOption } from '@/lib/status'
-import UserAvatar from '@/components/chat/UserAvatar.vue'
-import ProfileSettingsDialog from '@/components/chat/ProfileSettingsDialog.vue'
+import { computed, ref } from "vue";
+import { useChatStore } from "@/stores/chat-store";
+import { STATUS_OPTIONS, statusOption } from "@/lib/status";
+import UserAvatar from "@/components/chat/UserAvatar.vue";
+import ProfileSettingsDialog from "@/components/chat/ProfileSettingsDialog.vue";
 
-const chat = useChatStore()
+const chat = useChatStore();
 
-const settingsOpen = ref(false)
+const settingsOpen = ref(false);
 
-const current = computed(() => statusOption(chat.me.status))
+const current = computed(() => statusOption(chat.me.status));
 </script>
 
 <style scoped>

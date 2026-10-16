@@ -66,7 +66,6 @@ const required = (val: string) => !!val || "This field is required";
 const isEmail = (val: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || "Enter a valid email";
 
-
 async function onSubmit() {
   loading.value = true;
   await new Promise(resolve => setTimeout(resolve, 500));
