@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="open" @before-show="reset">
-    <q-card class="settings-card">
+    <q-card flat class="dialog-card settings-card">
       <q-card-section class="row items-center no-wrap">
         <div class="text-h6 col">Settings</div>
         <q-btn v-close-popup flat round dense icon="close" aria-label="Close" />
@@ -254,11 +254,9 @@ function onSubmit() {
 </script>
 
 <style scoped>
+/* a bit wider than the other dialogs: first + last name sit side by side */
 .settings-card {
-  width: 100%;
   max-width: 460px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .settings-body {

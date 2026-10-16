@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="open">
-    <q-card class="members-card">
+    <q-card flat class="dialog-card">
       <q-card-section class="row items-center">
         <div class="text-h6 col ellipsis">
           Members of {{ chat.channelLabel(channel) }}
@@ -65,13 +65,6 @@ const adminNick = computed(() => chat.findChannel(props.channel)?.adminNick);
 </script>
 
 <style scoped>
-.members-card {
-  width: 100%;
-  max-width: 420px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
 .admin-badge {
   background: #ffe27a;
 }
