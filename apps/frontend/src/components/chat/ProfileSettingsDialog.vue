@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="open" @before-show="reset">
-    <q-card class="settings-card">
+    <q-card flat class="dialog-card settings-card">
       <q-card-section class="row items-center no-wrap">
         <div class="text-h6 col">Settings</div>
         <q-btn v-close-popup flat round dense icon="close" aria-label="Close" />
@@ -139,7 +139,6 @@
             no-caps
             color="white"
             label="Save"
-            class="q-px-md"
           />
         </q-card-actions>
       </q-form>
@@ -163,8 +162,8 @@ const fileInput = useTemplateRef<HTMLInputElement>("fileInput");
 // Pictures are scaled down before they are kept, so the store stays small
 const AVATAR_SIZE = 160;
 
-// Nothing is applied until Save; Cancel or closing throws the draft away.
-// avatarUrl "" means "no picture" (removed).
+// Nothing is applied until Save; Cancel or closing throws the draft away
+// avatarUrl "" means "no picture"
 const form = reactive({
   nickName: "",
   firstName: "",
@@ -192,11 +191,13 @@ const isNickName = (val: string) =>
 async function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
-  // let the same file be picked again after "Remove picture"
+
+  // Reset the input to allow the same file to be picked again
   input.value = "";
   if (!file) {
     return;
   }
+
   if (!file.type.startsWith("image/")) {
     Notify.create({ type: "negative", message: "Pick an image file" });
     return;
@@ -252,14 +253,11 @@ function onSubmit() {
 </script>
 
 <style scoped>
+/* a bit wider than the other dialogs: first + last name sit side by side */
 .settings-card {
-  width: 100%;
   max-width: 460px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* the body scrolls on short screens, the Save row stays visible */
 .settings-body {
   max-height: 65vh;
   overflow-y: auto;
@@ -271,18 +269,18 @@ function onSubmit() {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.6;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-sm);
 }
 
 .name-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--space-md);
 }
 
 .option-list {
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -293,14 +291,13 @@ function onSubmit() {
 
 .settings-actions {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 12px;
+  padding-top: var(--space-md);
 }
 
 .muted {
   opacity: 0.7;
 }
 
-/* phones: names stack, 16px inputs stop iOS Safari from zooming on focus */
 @media (max-width: 599px) {
   .name-row {
     grid-template-columns: 1fr;

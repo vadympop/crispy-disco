@@ -1,6 +1,5 @@
 <template>
   <div class="command-line q-px-md q-pb-sm">
-    <!-- Command suggestions while the user types "/..." -->
     <div v-if="showSuggestions" class="suggestions q-mb-xs">
       <q-list ref="suggestionList" dense class="suggestion-items">
         <q-item
@@ -81,14 +80,14 @@ const dismissed = ref(false);
 
 const isCommand = computed(() => text.value.trimStart().startsWith("/"));
 
-// Without an open channel only commands make sense (e.g. /join)
+// Without an open channel only commands make sense
 const canSend = computed(
   () => text.value.trim() !== "" && (isCommand.value || props.channel !== null)
 );
 
 const placeholder = computed(() =>
   props.channel
-    ? `Message ${chat.channelLabel(props.channel)} or type / for commands`
+    ? `Type / for commands`
     : "Type /join channelName to get started"
 );
 
@@ -132,8 +131,8 @@ function moveActive(step: number) {
   activeIndex.value = (activeIndex.value + step + count) % count;
 }
 
-// While suggestions are open: arrows move, Enter/Tab pick, Esc closes.
-// Otherwise Enter sends and Shift+Enter inserts a new line.
+// While suggestions are open: arrows move, Enter/Tab pick, Esc closes
+// Otherwise Enter sends and Shift+Enter inserts a new line
 function onKeydown(event: KeyboardEvent) {
   if (showSuggestions.value) {
     const active = suggestions.value[activeIndex.value];
@@ -186,7 +185,6 @@ async function submit() {
   text.value = "";
 
   if (!value.startsWith("/")) {
-    // canSend guarantees a channel is open for plain messages
     chat.sendMessage(props.channel!, value);
     return;
   }
@@ -205,7 +203,7 @@ async function submit() {
 .suggestions {
   background: #2f3572;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -220,7 +218,7 @@ async function submit() {
 }
 
 .suggestion-hint {
-  padding: 6px 12px;
+  padding: var(--space-xs) var(--space-md);
   font-size: 0.75rem;
   opacity: 0.7;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
@@ -230,9 +228,9 @@ kbd {
   display: inline-block;
   min-width: 18px;
   margin: 0 2px;
-  padding: 0 4px;
+  padding: 0 var(--space-xs);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.7rem;
   text-align: center;
@@ -242,7 +240,6 @@ kbd {
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* 16px stops iOS Safari from zooming in on focus */
 .command-input :deep(textarea) {
   font-size: 16px;
   max-height: 120px;

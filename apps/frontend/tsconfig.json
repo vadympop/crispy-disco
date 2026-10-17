@@ -3,7 +3,12 @@
   "compilerOptions": {
     "experimentalDecorators": true
   },
-  "include": [".quasar/*.d.ts", "./**/*", "../backend/**/*.ts", "../backend/.adonisjs/**/*.ts"],
+  "include": [
+    ".quasar/*.d.ts",
+    "./**/*",
+    "../backend/**/*.ts",
+    "../backend/.adonisjs/**/*.ts"
+  ],
   "exclude": [
     "./dist",
     "./node_modules",

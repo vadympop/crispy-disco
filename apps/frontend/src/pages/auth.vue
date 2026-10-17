@@ -11,17 +11,18 @@
 <style scoped>
 .auth-page {
   background: #505ba3;
-  padding: 16px;
+  padding: var(--space-md);
 }
 
 /* tablets and desktops: a bit more breathing room inside the card */
 @media (min-width: 600px) {
   .auth-page {
-    padding: 32px;
+    padding: var(--space-lg);
   }
 
   .auth-page :deep(.auth-card) {
-    padding: 8px 16px;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-lg);
   }
 }
 
@@ -42,12 +43,10 @@
     justify-content: center;
   }
 
-  /* full-width button is easier to tap */
   .auth-page :deep(.auth-btn) {
     width: 100%;
   }
 
-  /* 16px inputs stop iOS Safari from zooming in on focus */
   .auth-page :deep(.q-field__native) {
     font-size: 16px;
   }

@@ -12,7 +12,6 @@
     "vue",
     "vuejs"
   ],
-  "author": "Vadim Popovych <zyzel19@gmail.com>",
   "type": "module",
   "scripts": {
     "lint": "oxfmt && oxlint --fix",
