@@ -208,7 +208,7 @@ const features: Feature[] = [
 
 .hero-subtitle {
   font-size: 1.15rem;
-  max-width: 640px;
+  max-width: 900px;
   margin: 0 auto 32px;
   opacity: 0.9;
 }
