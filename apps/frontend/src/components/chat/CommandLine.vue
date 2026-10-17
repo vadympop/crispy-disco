@@ -87,7 +87,7 @@ const canSend = computed(
 
 const placeholder = computed(() =>
   props.channel
-    ? `Message ${chat.channelLabel(props.channel)} or type / for commands`
+    ? `Type / for commands`
     : "Type /join channelName to get started"
 );
 
