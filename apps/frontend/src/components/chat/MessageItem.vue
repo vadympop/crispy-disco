@@ -21,7 +21,9 @@
           <span
             v-if="part.startsWith('@')"
             class="mention"
-            :class="{ 'mention-me': part === `@${chat.me.nickName}` }"
+            :class="{
+              'mention-me cursor-pointer': part === `@${chat.me.nickName}`
+            }"
             >{{ part }}</span
           >
           <template v-else>{{ part }}</template>

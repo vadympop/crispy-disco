@@ -19,7 +19,7 @@
     <q-item
       v-for="channel in invites"
       :key="channel.name"
-      class="invite-item q-mx-sm q-mb-xs"
+      class="invite-item q-mx-sm q-mb-xs cursor-pointer"
     >
       <q-item-section avatar>
         <q-icon name="mail" class="text-disco-yellow" />
