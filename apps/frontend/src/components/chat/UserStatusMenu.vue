@@ -14,7 +14,7 @@
       <q-item-label class="text-weight-bold">{{
         chat.me.nickName
       }}</q-item-label>
-      <q-item-label caption>{{ current.label }}</q-item-label>
+      <q-item-label caption class="muted">{{ current.label }}</q-item-label>
     </q-item-section>
     <q-item-section side>
       <!-- .stop: the gear opens the full settings, not the quick menu -->
@@ -25,6 +25,7 @@
         icon="settings"
         aria-label="Settings"
         @click.stop="settingsOpen = true"
+        color="white"
       >
         <q-tooltip>Settings</q-tooltip>
       </q-btn>

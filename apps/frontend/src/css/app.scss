@@ -1,1 +1,78 @@
 // app global css
+
+// Design tokens shared by every component
+// Radius: sm for inline chips (code, kbd, mentions), md for list items, menus
+// and fields ($generic-border-radius in quasar.variables.scss), lg for cards,
+// dialogs and panels.
+// Spacing: the same steps as Quasar's q-pa-* / q-ma-* classes, so CSS and
+// helper classes line up. https://quasar.dev/style/spacing
+:root {
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 48px;
+}
+
+// Shared look for the card inside every q-dialog. Use it together with the
+// `flat` prop: in dark mode Quasar draws card shadows in white
+// ($dark-shadow-color), which shows up as a glow around the dialog.
+.dialog-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+// Navy-tinted, slightly blurred overlay behind every dialog
+.q-dialog .q-dialog__backdrop {
+  background: rgba(20, 24, 60, 0.6);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+// Same white-glow problem on every q-menu in dark mode ($menu-box-shadow-dark).
+// Swap the shadow for the border the dialogs use. Cards placed inside a menu
+// are `flat` and borderless, so the menu itself draws the frame.
+.q-menu.q-menu--dark {
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+}
+
+// Thin, translucent scrollbars for every scroll container
+// https://developer.mozilla.org/en-US/docs/Web/CSS/scrollbar-color
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+// Fallback for Safari, which has no scrollbar-color yet
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+// Inline `code` chips (command names in the welcome page and channel screens)
+code {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-xs);
+}

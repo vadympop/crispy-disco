@@ -21,7 +21,9 @@
           <span
             v-if="part.startsWith('@')"
             class="mention"
-            :class="{ 'mention-me': part === `@${chat.me.nickName}` }"
+            :class="{
+              'mention-me cursor-pointer': part === `@${chat.me.nickName}`
+            }"
             >{{ part }}</span
           >
           <template v-else>{{ part }}</template>
@@ -43,7 +45,6 @@ const props = defineProps<{ message: Message }>();
 
 const chat = useChatStore();
 
-// Splitting with a capture group keeps the "@nick" pieces in the result:
 // "hi @ed !" -> ["hi ", "@ed", " !"]
 const parts = computed(() =>
   props.message.text.split(/(@[\w.-]+)/).filter(part => part !== "")
@@ -84,8 +85,8 @@ const time = computed(() => date.formatDate(props.message.createdAt, "HH:mm"));
 .mention-me {
   color: #252a5c;
   background: #ffe27a;
-  border-radius: 4px;
-  padding: 0 2px;
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-xs);
 }
 
 .message-mention,

@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="open" @hide="reset">
-    <q-card class="create-card">
+    <q-card flat class="dialog-card">
       <q-card-section>
         <div class="text-h6">Create or join a channel</div>
         <div class="text-caption muted">
@@ -74,13 +74,6 @@ function reset() {
 </script>
 
 <style scoped>
-.create-card {
-  width: 100%;
-  max-width: 420px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
 .muted {
   opacity: 0.7;
 }

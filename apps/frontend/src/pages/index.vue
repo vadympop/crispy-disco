@@ -56,12 +56,14 @@
           </div>
 
           <div class="landing-container text-center">
-            <h3 class="hero-title">A place for your gang to talk with huzz</h3>
+            <h3 class="hero-title">A place for your gang to yap</h3>
             <p class="hero-subtitle">
-              Introducing the world's first messenger where you can see what
-              your friends think, not what they send you. It comes with a purple
+              Introducing the world-class messenger where you can see what your
+              friends think, not what they send you. It comes with a purple
               theme that makes you feel like you're in a club, making your
-              communication easy and honest.
+              communication easy and honest. Think Slack, but without the
+              corporate bullshit, fake productivity, and pretending to care
+              about synergy.
             </p>
           </div>
 
@@ -101,8 +103,6 @@
 import { onBeforeUnmount, onMounted } from "vue";
 import DiscoBallLogo from "@/components/DiscoBallLogo.vue";
 
-// macOS rubber-band overscroll reveals the root background, which is white
-// by default. Match it to the header/footer while this page is open.
 const LANDING_BG = "#252a5c";
 
 onMounted(() => {
@@ -165,8 +165,8 @@ const features: Feature[] = [
 .landing-container {
   max-width: 1100px;
   margin: 0 auto;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: var(--space-md);
+  padding-right: var(--space-md);
 }
 
 .hero {
@@ -186,7 +186,6 @@ const features: Feature[] = [
   opacity: 0.85;
 }
 
-/* the arrow tip sits right under the Log in / Register buttons */
 .hero-pointer-arrow {
   top: -98px;
   right: 72px;
@@ -204,12 +203,12 @@ const features: Feature[] = [
   font-size: clamp(2rem, 6vw, 3.5rem);
   line-height: 1.15;
   font-weight: 700;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-md);
 }
 
 .hero-subtitle {
   font-size: 1.15rem;
-  max-width: 640px;
+  max-width: 900px;
   margin: 0 auto 32px;
   opacity: 0.9;
 }
@@ -218,17 +217,17 @@ const features: Feature[] = [
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .features {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .feature-card {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: #252a5c;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.2);

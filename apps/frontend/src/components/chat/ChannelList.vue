@@ -19,18 +19,18 @@
     <q-item
       v-for="channel in invites"
       :key="channel.name"
-      class="invite-item q-mx-sm q-mb-xs"
+      class="invite-item q-mx-sm q-mb-xs cursor-pointer"
     >
       <q-item-section avatar>
         <q-icon name="mail" class="text-disco-yellow" />
       </q-item-section>
       <q-item-section>
-        <q-item-label class="text-weight-bold"
-          >#{{ channel.name }}</q-item-label
-        >
-        <q-item-label caption
-          >Invitation from {{ channel.adminNick }}</q-item-label
-        >
+        <q-item-label class="text-weight-bold">
+          #{{ channel.name }}
+        </q-item-label>
+        <q-item-label caption class="muted">
+          Invitation from {{ channel.adminNick }}
+        </q-item-label>
       </q-item-section>
       <q-item-section side class="row no-wrap">
         <div>
@@ -82,9 +82,9 @@
         <div class="row no-wrap items-center">
           <q-icon
             v-if="chat.isAdmin(channel) && !channel.directWith"
-            name="star"
+            name="shield"
             size="16px"
-            class="text-disco-yellow"
+            class="text-disco-yellow q-mr-xs"
           >
             <q-tooltip>You are the admin</q-tooltip>
           </q-icon>
@@ -183,7 +183,7 @@ async function goHomeIfOpen(name: string) {
 
 <style scoped>
 .channel-item {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   min-height: 40px;
   color: rgba(255, 255, 255, 0.8);
 }
@@ -192,7 +192,6 @@ async function goHomeIfOpen(name: string) {
   min-width: 32px;
 }
 
-/* the circle avatar is a bit heavy at this size, the font follows it */
 .dm-avatar {
   font-size: 11px;
 }
@@ -204,7 +203,7 @@ async function goHomeIfOpen(name: string) {
 }
 
 .invite-item {
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(255, 226, 122, 0.12);
   border-left: 3px solid #ffe27a;
 }

@@ -24,3 +24,8 @@ $positive: #21ba45;
 $negative: #c10015;
 $info: #31ccec;
 $warning: #f2c037;
+
+// Corner radius of Quasar's own components (fields, square buttons, cards,
+// menus, tooltips). Matches --radius-md in app.scss. `rounded` buttons stay pills.
+$generic-border-radius: 8px;
+$button-border-radius: 8px;

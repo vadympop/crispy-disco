@@ -1,7 +1,7 @@
 <template>
   <!-- Place inside the element that should open it (avatar, nick, list item) -->
   <q-menu anchor="bottom left" self="top left" :offset="[0, 6]">
-    <q-card class="profile-card">
+    <q-card flat class="profile-card">
       <q-card-section class="row items-center no-wrap">
         <UserAvatar :nick-name="nickName" size="56px" class="q-mr-md">
           <q-badge
@@ -115,8 +115,6 @@ async function startChat() {
 .profile-card {
   width: 280px;
   max-width: calc(100vw - 32px);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .muted {
@@ -137,7 +135,7 @@ async function startChat() {
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-sm);
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }

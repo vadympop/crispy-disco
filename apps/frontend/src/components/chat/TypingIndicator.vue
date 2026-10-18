@@ -9,7 +9,7 @@
           {{ draft.nickName }}
           <!-- Clicking the nick shows what they are writing, updated live -->
           <q-menu anchor="top left" self="bottom left" :offset="[0, 6]">
-            <q-card class="draft-card">
+            <q-card flat class="draft-card">
               <q-card-section class="q-pb-none text-caption draft-label">
                 {{ draft.nickName }} is writing…
               </q-card-section>
@@ -61,8 +61,6 @@ onUnmounted(() => {
 
 .draft-card {
   max-width: 320px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
 }
 
 .draft-label {
