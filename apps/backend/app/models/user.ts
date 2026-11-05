@@ -34,11 +34,11 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   })
   declare mentionedIn: ManyToMany<typeof Message>
 
+  get fullName() {
+    return `${this.firstName} ${this.lastName}`.trim()
+  }
+
   get initials() {
-    const [first, last] = this.fullName ? this.fullName.split(' ') : this.email.split('@')
-    if (first && last) {
-      return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
-    }
-    return `${first.slice(0, 2)}`.toUpperCase()
+    return this.firstName && this.lastName ? `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase() : 'IDK'
   }
 }
