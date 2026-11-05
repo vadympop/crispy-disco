@@ -25,26 +25,113 @@ export class AuthAccessTokenSchema extends BaseModel {
   @column()
   declare name: string | null
   @column()
-  declare tokenableId: number
+  declare tokenableId: string
   @column()
   declare type: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
 
+export class ChannelMemberSchema extends BaseModel {
+  static $columns = ['channelId', 'createdAt', 'status', 'updatedAt', 'userId'] as const
+  $columns = ChannelMemberSchema.$columns
+  @column({ isPrimary: true })
+  declare channelId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime | null
+  @column()
+  declare status: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: string
+}
+
+export class ChannelSchema extends BaseModel {
+  static $columns = ['createdAt', 'creatorId', 'id', 'lastActivityAt', 'name', 'type', 'updatedAt'] as const
+  $columns = ChannelSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime | null
+  @column()
+  declare creatorId: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column.dateTime()
+  declare lastActivityAt: DateTime | null
+  @column()
+  declare name: string
+  @column()
+  declare type: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class KickVoteSchema extends BaseModel {
+  static $columns = ['channelId', 'createdAt', 'id', 'targetId', 'voterId'] as const
+  $columns = KickVoteSchema.$columns
+  @column()
+  declare channelId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare targetId: string
+  @column()
+  declare voterId: string
+}
+
+export class MessageMentionSchema extends BaseModel {
+  static $columns = ['messageId', 'userId'] as const
+  $columns = MessageMentionSchema.$columns
+  @column({ isPrimary: true })
+  declare messageId: string
+  @column()
+  declare userId: string
+}
+
+export class MessageSchema extends BaseModel {
+  static $columns = ['authorId', 'channelId', 'content', 'createdAt', 'deletedAt', 'id', 'parentMessageId', 'updatedAt'] as const
+  $columns = MessageSchema.$columns
+  @column()
+  declare authorId: string
+  @column()
+  declare channelId: string
+  @column()
+  declare content: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime | null
+  @column.dateTime()
+  declare deletedAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare parentMessageId: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'updatedAt'] as const
+  static $columns = ['createdAt', 'email', 'firstName', 'id', 'isReceivingMentions', 'lastName', 'nickname', 'password', 'status', 'updatedAt'] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
   declare email: string
   @column()
-  declare fullName: string | null
+  declare firstName: string | null
   @column({ isPrimary: true })
-  declare id: number
+  declare id: string
+  @column()
+  declare isReceivingMentions: boolean
+  @column()
+  declare lastName: string | null
+  @column()
+  declare nickname: string
   @column({ serializeAs: null })
   declare password: string
+  @column()
+  declare status: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
