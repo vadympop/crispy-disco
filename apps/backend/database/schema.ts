@@ -32,6 +32,21 @@ export class AuthAccessTokenSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class ChannelMemberSchema extends BaseModel {
+  static $columns = ['channelId', 'createdAt', 'status', 'updatedAt', 'userId'] as const
+  $columns = ChannelMemberSchema.$columns
+  @column({ isPrimary: true })
+  declare channelId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime | null
+  @column()
+  declare status: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: string
+}
+
 export class ChannelSchema extends BaseModel {
   static $columns = ['createdAt', 'creatorId', 'id', 'lastActivityAt', 'name', 'type', 'updatedAt'] as const
   $columns = ChannelSchema.$columns
@@ -49,6 +64,15 @@ export class ChannelSchema extends BaseModel {
   declare type: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+}
+
+export class MessageMentionSchema extends BaseModel {
+  static $columns = ['messageId', 'userId'] as const
+  $columns = MessageMentionSchema.$columns
+  @column({ isPrimary: true })
+  declare messageId: string
+  @column()
+  declare userId: string
 }
 
 export class MessageSchema extends BaseModel {
