@@ -13,17 +13,20 @@ export default class Message extends MessageSchema {
     message.id = randomUUID()
   }
 
-  /**
-   * A message belongs to a user
-   */
-  @belongsTo(() => User)
+  @belongsTo(() => User, {
+    foreignKey: 'authorId',
+  })
   declare author: BelongsTo<typeof User>
 
-  /**
-   * A message belongs to a channel
-   */
-  @belongsTo(() => Channel)
+  @belongsTo(() => Channel, {
+    foreignKey: 'channelId',
+  })
   declare channel: BelongsTo<typeof Channel>
+
+  @belongsTo(() => Message, {
+    foreignKey: 'parentMessageId',
+  })
+  declare parent: BelongsTo<typeof Message>
 
   /**
    * Users mentioned with @nickname in this message
