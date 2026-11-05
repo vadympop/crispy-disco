@@ -1,6 +1,4 @@
 <template>
-  <!-- "lFf": the drawer owns the bottom-left corner, so the command line
-       footer sits next to the channel list instead of under it -->
   <q-layout view="hHh LpR lFf" class="chat-layout">
     <q-header class="chat-header">
       <q-toolbar>
