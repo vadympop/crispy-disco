@@ -8,7 +8,7 @@ export default class extends BaseSchema {
       table.uuid('id').primary()
       table.enu('type', ['public', 'private']).notNullable()
       table
-        .string('creator_id')
+        .uuid('creator_id')
         .notNullable()
         .references('id')
         .inTable('users')

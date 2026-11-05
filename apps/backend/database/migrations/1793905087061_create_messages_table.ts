@@ -7,21 +7,16 @@ export default class extends BaseSchema {
     this.schema.createTable(this.tableName, (table) => {
       table.uuid('id').primary()
       table
-        .string('channel_id')
+        .uuid('channel_id')
         .notNullable()
         .references('id')
         .inTable('channels')
         .onDelete('CASCADE')
-      table
-        .string('author_id')
-        .notNullable()
-        .references('id')
-        .inTable('users')
-        .onDelete('CASCADE')
+      table.uuid('author_id').notNullable().references('id').inTable('users').onDelete('CASCADE')
 
       table.text('content').notNullable()
       table
-        .string('parent_message_id')
+        .uuid('parent_message_id')
         .nullable()
         .references('id')
         .inTable('messages')
