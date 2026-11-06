@@ -42,6 +42,12 @@ const routes = {
     tokens: [{"old":"/api/v1/channels/join","type":0,"val":"api","end":""},{"old":"/api/v1/channels/join","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/join","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/join","type":0,"val":"join","end":""}],
     types: placeholder as Registry['channels.join']['types'],
   },
+  'channels.direct': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/direct',
+    tokens: [{"old":"/api/v1/channels/direct","type":0,"val":"api","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"direct","end":""}],
+    types: placeholder as Registry['channels.direct']['types'],
+  },
   'channels.cancel': {
     methods: ["POST"],
     pattern: '/api/v1/channels/:name/cancel',

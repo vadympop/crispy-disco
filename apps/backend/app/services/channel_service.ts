@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import { Exception } from '@adonisjs/core/exceptions'
 import Channel from '#models/channel'
-import type User from '#models/user'
+import User from '#models/user'
 
 export const CHANNEL_EXPIRY_DAYS = 30
 
@@ -10,7 +11,54 @@ type MemberStatus = 'member' | 'invited' | 'banned'
 
 export default class ChannelService {
   async listFor(user: User) {
-    return user.related('channels').query().whereNotPivot('status', 'banned').preload('creator')
+    const channels = await user
+      .related('channels')
+      .query()
+      .whereNotPivot('status', 'banned')
+      .preload('creator')
+    await this.loadDirectMembers(channels)
+    return channels
+  }
+
+  // Opens the direct chat with `nickname`, creating it the first time
+  async startDirect(user: User, nickname: string) {
+    const partner = await User.findBy('nickname', nickname)
+    if (!partner) {
+      throw new Exception(`User ${nickname} does not exist`, {
+        status: 404,
+        code: 'E_USER_NOT_FOUND',
+      })
+    }
+    if (partner.id === user.id) {
+      throw new Exception("You can't start a chat with yourself", {
+        status: 422,
+        code: 'E_DIRECT_WITH_SELF',
+      })
+    }
+
+    const name = directChannelName(user.id, partner.id)
+    const channelId = await db.transaction(async (trx) => {
+      const existing = await Channel.query({ client: trx }).where('name', name).forUpdate().first()
+      if (existing) {
+        return existing.id
+      }
+
+      const channel = await Channel.create(
+        {
+          name,
+          type: 'direct',
+          creatorId: user.id,
+          lastActivityAt: DateTime.now(),
+        },
+        { client: trx }
+      )
+      await channel
+        .related('members')
+        .attach({ [user.id]: { status: 'member' }, [partner.id]: { status: 'member' } }, trx)
+      return channel.id
+    })
+
+    return this.findForUser(user, channelId)
   }
 
   async join(user: User, name: string, isPrivate = false) {
@@ -69,7 +117,8 @@ export default class ChannelService {
       })
     }
 
-    if (this.isAdmin(user, channel)) {
+    // a direct chat can't continue with one person, so leaving deletes it
+    if (this.isAdmin(user, channel) || channel.isDirect) {
       await channel.delete()
       return { channelDeleted: true }
     }
@@ -81,7 +130,11 @@ export default class ChannelService {
   async quit(user: User, name: string) {
     const channel = await this.findByNameOrFail(name)
 
-    if (!this.isAdmin(user, channel)) {
+    // in a direct chat both people can delete it
+    const canDelete =
+      this.isAdmin(user, channel) ||
+      (channel.isDirect && (await this.statusOf(user, channel)) === 'member')
+    if (!canDelete) {
       throw new Exception('Only the admin can close the channel', {
         status: 403,
         code: 'E_NOT_CHANNEL_ADMIN',
@@ -151,12 +204,24 @@ export default class ChannelService {
   }
 
   private async findForUser(user: User, channelId: string) {
-    return user
+    const channel = await user
       .related('channels')
       .query()
       .where('channels.id', channelId)
       .preload('creator')
       .firstOrFail()
+    await this.loadDirectMembers([channel])
+    return channel
+  }
+
+  // The frontend needs the other person of a direct chat. Only direct chats
+  // get their members loaded, since a public channel can have many.
+  private async loadDirectMembers(channels: Channel[]) {
+    for (const channel of channels) {
+      if (channel.isDirect) {
+        await channel.load('members')
+      }
+    }
   }
 
   private async statusOf(user: User, channel: Channel): Promise<MemberStatus | null> {
@@ -171,4 +236,12 @@ export default class ChannelService {
       .where('user_id', user.id)
       .update({ status, updated_at: new Date() })
   }
+}
+
+// Both users get the same name, so the unique index prevents a second chat
+// between them. It is longer than /join allows (30), so it never clashes
+// with a normal channel.
+function directChannelName(userId: string, otherId: string) {
+  const ids = [userId, otherId].sort().join(':')
+  return `dm-${createHash('sha1').update(ids).digest('hex')}`
 }

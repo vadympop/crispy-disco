@@ -21,6 +21,7 @@ export interface ApiDefinition {
   channels: {
     index: typeof routes['channels.index']
     join: typeof routes['channels.join']
+    direct: typeof routes['channels.direct']
     cancel: typeof routes['channels.cancel']
     decline: typeof routes['channels.decline']
     destroy: typeof routes['channels.destroy']

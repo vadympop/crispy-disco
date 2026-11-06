@@ -79,6 +79,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['join']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'channels.direct': {
+    methods: ["POST"]
+    pattern: '/api/v1/channels/direct'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/channel').startDirectValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/channel').startDirectValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['direct']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['direct']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'channels.cancel': {
     methods: ["POST"]
     pattern: '/api/v1/channels/:name/cancel'

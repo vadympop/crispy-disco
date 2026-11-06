@@ -2,7 +2,7 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import ChannelService from '#services/channel_service'
 import ChannelTransformer from '#transformers/channel_transformer'
-import { joinChannelValidator } from '#validators/channel'
+import { joinChannelValidator, startDirectValidator } from '#validators/channel'
 
 @inject()
 export default class ChannelsController {
@@ -27,6 +27,13 @@ export default class ChannelsController {
     }
     // depth(2): the channel is nested in this object, and its creator one level deeper
     return serialize({ channel: ChannelTransformer.transform(channel).depth(2), created })
+  }
+
+  // POST /channels/direct - open the direct chat with a user, creating it the first time
+  async direct({ auth, request, serialize }: HttpContext) {
+    const { nickname } = await request.validateUsing(startDirectValidator)
+    const channel = await this.channelService.startDirect(auth.getUserOrFail(), nickname)
+    return serialize(ChannelTransformer.transform(channel))
   }
 
   // POST /channels/:name/cancel - leave; the channel is deleted if the admin leaves

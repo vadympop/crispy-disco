@@ -16,3 +16,10 @@ export const joinChannelValidator = vine.create({
   name: channelName(),
   isPrivate: vine.boolean().optional(),
 })
+
+/**
+ * Start a direct chat with another user
+ */
+export const startDirectValidator = vine.create({
+  nickname: vine.string().trim(),
+})

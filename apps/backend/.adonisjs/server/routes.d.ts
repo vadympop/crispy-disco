@@ -10,6 +10,7 @@ export type ScannedRoutes = {
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
     'channels.join': { paramsTuple?: []; params?: {} }
+    'channels.direct': { paramsTuple?: []; params?: {} }
     'channels.cancel': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.decline': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
@@ -27,6 +28,7 @@ export type ScannedRoutes = {
     'auth.access_tokens.store': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'channels.join': { paramsTuple?: []; params?: {} }
+    'channels.direct': { paramsTuple?: []; params?: {} }
     'channels.cancel': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.decline': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
   }
