@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-definePage({ meta: { guestOnly: true } })
+definePage({ meta: { guestOnly: true } });
 </script>
 
 <style scoped>

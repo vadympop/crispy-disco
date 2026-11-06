@@ -6,17 +6,12 @@ export interface User {
   lastName: string;
   nickName: string;
   status: UserStatus;
-  // data: URL of an uploaded picture; without it the avatar shows the initial
   avatarUrl?: string;
 }
 
-// The fields the user can edit in the profile settings dialog
-export type ProfileUpdate = Pick<
-  User,
-  "nickName" | "firstName" | "lastName" | "avatarUrl"
->;
-
 export interface Channel {
+  // database id; missing for mock channels and local direct chats
+  id?: string;
   name: string;
   isPrivate: boolean;
   adminNick: string;

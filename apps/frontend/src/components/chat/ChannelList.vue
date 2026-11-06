@@ -29,7 +29,7 @@
           #{{ channel.name }}
         </q-item-label>
         <q-item-label caption class="muted">
-          Invitation from {{ channel.adminNick }}
+          Invitation from {{ channel.creator.nickname }}
         </q-item-label>
       </q-item-section>
       <q-item-section side class="row no-wrap">
@@ -68,8 +68,8 @@
     >
       <q-item-section avatar class="channel-icon">
         <UserAvatar
-          v-if="channel.directWith"
-          :nick-name="channel.directWith"
+          v-if="channel.isDirect"
+          :nick-name="chat.directPartner(channel)?.nickname ?? ''"
           size="22px"
           class="dm-avatar"
         />
@@ -81,7 +81,7 @@
       <q-item-section side class="row no-wrap items-center">
         <div class="row no-wrap items-center">
           <q-icon
-            v-if="chat.isAdmin(channel) && !channel.directWith"
+            v-if="chat.isAdmin(channel) && !channel.isDirect"
             name="shield"
             size="16px"
             class="text-disco-yellow q-mr-xs"
@@ -101,7 +101,7 @@
             <q-menu>
               <q-list dense style="min-width: 160px">
                 <q-item
-                  v-if="!channel.directWith"
+                  v-if="!channel.isDirect"
                   v-close-popup
                   clickable
                   @click="leave(channel.name)"
@@ -122,7 +122,7 @@
                     ><q-icon name="delete"
                   /></q-item-section>
                   <q-item-section>{{
-                    channel.directWith ? "Delete chat" : "Delete channel"
+                    channel.isDirect ? "Delete chat" : "Delete channel"
                   }}</q-item-section>
                 </q-item>
               </q-list>
@@ -159,18 +159,19 @@ const invites = computed(() => chat.sortedChannels.filter(c => c.invited));
 const joined = computed(() => chat.sortedChannels.filter(c => !c.invited));
 
 async function accept(name: string) {
-  chat.acceptInvite(name);
-  await router.push(`/channels/${name}`);
+  if (await chat.acceptInvite(name)) {
+    await router.push(`/channels/${name}`);
+  }
 }
 
 // After leaving/deleting the open channel, go back to the welcome screen
 async function leave(name: string) {
-  chat.leaveChannel(name);
+  await chat.leaveChannel(name);
   await goHomeIfOpen(name);
 }
 
 async function remove(name: string) {
-  chat.deleteChannel(name);
+  await chat.deleteChannel(name);
   await goHomeIfOpen(name);
 }
 

@@ -30,6 +30,60 @@ const routes = {
     tokens: [{"old":"/api/v1/account/logout","type":0,"val":"api","end":""},{"old":"/api/v1/account/logout","type":0,"val":"v1","end":""},{"old":"/api/v1/account/logout","type":0,"val":"account","end":""},{"old":"/api/v1/account/logout","type":0,"val":"logout","end":""}],
     types: placeholder as Registry['profile.access_tokens.destroy']['types'],
   },
+  'channels.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/channels',
+    tokens: [{"old":"/api/v1/channels","type":0,"val":"api","end":""},{"old":"/api/v1/channels","type":0,"val":"v1","end":""},{"old":"/api/v1/channels","type":0,"val":"channels","end":""}],
+    types: placeholder as Registry['channels.index']['types'],
+  },
+  'channels.join': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/join',
+    tokens: [{"old":"/api/v1/channels/join","type":0,"val":"api","end":""},{"old":"/api/v1/channels/join","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/join","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/join","type":0,"val":"join","end":""}],
+    types: placeholder as Registry['channels.join']['types'],
+  },
+  'channels.direct': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/direct',
+    tokens: [{"old":"/api/v1/channels/direct","type":0,"val":"api","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"direct","end":""}],
+    types: placeholder as Registry['channels.direct']['types'],
+  },
+  'channels.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/channels/:id',
+    tokens: [{"old":"/api/v1/channels/:id","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['channels.show']['types'],
+  },
+  'channels.members': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/channels/:id/members',
+    tokens: [{"old":"/api/v1/channels/:id/members","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/members","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/members","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/members","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/members","type":0,"val":"members","end":""}],
+    types: placeholder as Registry['channels.members']['types'],
+  },
+  'channels.cancel': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:id/cancel',
+    tokens: [{"old":"/api/v1/channels/:id/cancel","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/cancel","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/cancel","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/cancel","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/cancel","type":0,"val":"cancel","end":""}],
+    types: placeholder as Registry['channels.cancel']['types'],
+  },
+  'channels.decline': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:id/decline',
+    tokens: [{"old":"/api/v1/channels/:id/decline","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/decline","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/decline","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/decline","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/decline","type":0,"val":"decline","end":""}],
+    types: placeholder as Registry['channels.decline']['types'],
+  },
+  'channels.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/channels/:id',
+    tokens: [{"old":"/api/v1/channels/:id","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['channels.destroy']['types'],
+  },
+  'users.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/users/:id',
+    tokens: [{"old":"/api/v1/users/:id","type":0,"val":"api","end":""},{"old":"/api/v1/users/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/users/:id","type":0,"val":"users","end":""},{"old":"/api/v1/users/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['users.show']['types'],
+  },
 } as const satisfies Record<string, AdonisEndpoint>
 
 export { routes }

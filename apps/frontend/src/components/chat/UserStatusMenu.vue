@@ -1,7 +1,7 @@
 <template>
   <q-item clickable class="status-bar">
     <q-item-section avatar>
-      <UserAvatar :nick-name="chat.me.nickName">
+      <UserAvatar :nick-name="auth.nickname ?? ''">
         <q-badge
           floating
           rounded
@@ -11,9 +11,7 @@
       </UserAvatar>
     </q-item-section>
     <q-item-section>
-      <q-item-label class="text-weight-bold">{{
-        chat.me.nickName
-      }}</q-item-label>
+      <q-item-label class="text-weight-bold">{{ auth.nickname }}</q-item-label>
       <q-item-label caption class="muted">{{ current.label }}</q-item-label>
     </q-item-section>
     <q-item-section side>
@@ -39,8 +37,8 @@
           :key="option.value"
           v-close-popup
           clickable
-          :active="chat.me.status === option.value"
-          @click="chat.setStatus(option.value)"
+          :active="auth.me?.status === option.value"
+          @click="auth.setStatus(option.value)"
         >
           <q-item-section avatar>
             <q-icon
@@ -61,7 +59,7 @@
           <q-item-section>
             <q-item-label>Notify only for mentions</q-item-label>
             <q-item-label caption
-              >Ignore messages without @{{ chat.me.nickName }}</q-item-label
+              >Ignore messages without @{{ auth.nickname }}</q-item-label
             >
           </q-item-section>
           <q-item-section side>
@@ -90,15 +88,17 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { STATUS_OPTIONS, statusOption } from "@/lib/status";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 import ProfileSettingsDialog from "@/components/chat/ProfileSettingsDialog.vue";
 
 const chat = useChatStore();
+const auth = useAuthStore();
 
 const settingsOpen = ref(false);
 
-const current = computed(() => statusOption(chat.me.status));
+const current = computed(() => statusOption(auth.me?.status ?? "offline"));
 </script>
 
 <style scoped>

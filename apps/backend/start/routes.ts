@@ -33,5 +33,28 @@ router
       .prefix('account')
       .as('profile')
       .use(middleware.auth())
+    router
+      .group(() => {
+        router.get('/', [controllers.Channels, 'index'])
+        router.post('join', [controllers.Channels, 'join'])
+        router.post('direct', [controllers.Channels, 'direct'])
+        // channels are addressed by id: a name can be reused after the channel is gone
+        router.get(':id', [controllers.Channels, 'show'])
+        router.get(':id/members', [controllers.Channels, 'members'])
+        router.post(':id/cancel', [controllers.Channels, 'cancel'])
+        router.post(':id/decline', [controllers.Channels, 'decline'])
+        router.delete(':id', [controllers.Channels, 'destroy'])
+      })
+      .where('id', router.matchers.uuid())
+      .prefix('channels')
+      .use(middleware.auth())
+
+    router
+      .group(() => {
+        router.get(':id', [controllers.Users, 'show'])
+      })
+      .where('id', router.matchers.uuid())
+      .prefix('users')
+      .use(middleware.auth())
   })
   .prefix('/api/v1')

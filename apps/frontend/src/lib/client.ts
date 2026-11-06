@@ -1,6 +1,6 @@
 import { createTuyau } from "@tuyau/core/client";
 import { registry } from "@cisco-disco/backend/registry";
-import { LOCALSTORAGE_KEYS } from '@/lib/storage-keys'
+import { LOCALSTORAGE_KEYS } from "@/lib/storage-keys";
 
 export const client = createTuyau({
   baseUrl: import.meta.env.API_URL,
@@ -9,7 +9,7 @@ export const client = createTuyau({
   hooks: {
     beforeRequest: [
       request => {
-        const token = localStorage.getItem(LOCALSTORAGE_KEYS.authToken)
+        const token = localStorage.getItem(LOCALSTORAGE_KEYS.authToken);
         if (token) {
           request.headers.set("Authorization", `Bearer ${token}`);
         }
@@ -18,10 +18,10 @@ export const client = createTuyau({
     beforeError: [
       error => {
         if (error.response?.status === 401) {
-          localStorage.removeItem(LOCALSTORAGE_KEYS.authToken)
+          localStorage.removeItem(LOCALSTORAGE_KEYS.authToken);
         }
 
-        return error
+        return error;
       }
     ]
   }

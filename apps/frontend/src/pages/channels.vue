@@ -13,12 +13,15 @@
 
         <q-toolbar-title v-if="channel" class="row items-center no-wrap">
           <UserAvatar
-            v-if="channel.directWith"
-            :nick-name="channel.directWith"
+            v-if="channel.isDirect"
+            :nick-name="chat.directPartner(channel)?.nickname ?? ''"
             size="28px"
             class="q-mr-sm cursor-pointer"
           >
-            <UserProfileMenu :nick-name="channel.directWith" />
+            <UserProfileMenu
+              :nick-name="chat.directPartner(channel)?.nickname ?? ''"
+              :user-id="chat.directPartner(channel)?.id"
+            />
           </UserAvatar>
           <q-icon
             v-else
@@ -28,7 +31,7 @@
           />
           <span class="ellipsis">{{ chat.channelTitle(channel) }}</span>
           <q-badge
-            v-if="chat.isAdmin(channel) && !channel.directWith"
+            v-if="chat.isAdmin(channel) && !channel.isDirect"
             text-color="dark"
             label="admin"
             class="admin-badge q-ml-sm"
@@ -115,7 +118,7 @@ const $q = useQuasar();
 const route = useRoute();
 const chat = useChatStore();
 
-definePage({ meta: { requiresAuth: true } })
+definePage({ meta: { requiresAuth: true } });
 
 // The chat screens use the landing palette through Quasar's dark mode
 // ($dark / $dark-page in quasar.variables.scss), so menus and dialogs match too.
@@ -125,6 +128,7 @@ const CHAT_BG = "#252a5c";
 onMounted(() => {
   $q.dark.set(true);
   document.documentElement.style.backgroundColor = CHAT_BG;
+  void chat.fetchChannels();
 });
 
 onBeforeUnmount(() => {

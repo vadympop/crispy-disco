@@ -1,6 +1,11 @@
 <template>
   <!-- Place inside the element that should open it (avatar, nick, list item) -->
-  <q-menu anchor="bottom left" self="top left" :offset="[0, 6]">
+  <q-menu
+    anchor="bottom left"
+    self="top left"
+    :offset="[0, 6]"
+    @before-show="loadProfile"
+  >
     <q-card flat class="profile-card">
       <q-card-section class="row items-center no-wrap">
         <UserAvatar :nick-name="nickName" size="56px" class="q-mr-md">
@@ -81,25 +86,54 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { statusOption } from "@/lib/status";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { useUsersStore } from "@/stores/users-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 
-const props = defineProps<{ nickName: string }>();
+const props = defineProps<{
+  nickName: string;
+  // when known, the profile is loaded from the server
+  userId?: string;
+}>();
 // fired before leaving to another channel, so a parent dialog can close
 const emit = defineEmits<{ navigated: [] }>();
 
 const chat = useChatStore();
+const auth = useAuthStore();
+const users = useUsersStore();
 const router = useRouter();
 
-const isMe = computed(() => props.nickName === chat.me.nickName);
-const user = computed(() =>
-  isMe.value ? chat.me : chat.findUser(props.nickName)
+const isMe = computed(() =>
+  props.userId ? props.userId === auth.userId : props.nickName === auth.nickname
 );
+
+const user = computed(() => {
+  if (isMe.value) {
+    return auth.me;
+  }
+  if (props.userId) {
+    return users.profiles[props.userId];
+  }
+  // TODO: message authors only have a nick until messages come from the API
+  return chat.findUser(props.nickName);
+});
+
+// reload on every open, so the status is current
+async function loadProfile() {
+  if (props.userId && !isMe.value) {
+    await users.fetchProfile(props.userId);
+  }
+}
 
 const fullName = computed(() =>
   user.value ? `${user.value.firstName} ${user.value.lastName}` : props.nickName
 );
 const status = computed(() => statusOption(user.value?.status ?? "offline"));
-const stats = computed(() => chat.userStats(props.nickName));
+const stats = computed(() =>
+  user.value
+    ? chat.userStats(user.value)
+    : { messageCount: 0, sharedChannels: [] }
+);
 
 async function openChannel(name: string) {
   emit("navigated");
@@ -107,7 +141,9 @@ async function openChannel(name: string) {
 }
 
 async function startChat() {
-  await openChannel(chat.startDirectChat(props.nickName));
+  if (user.value) {
+    await openChannel(await chat.startDirectChat(user.value.id));
+  }
 }
 </script>
 

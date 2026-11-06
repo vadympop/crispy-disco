@@ -12,7 +12,7 @@ import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   static selfAssignPrimaryKey = true
   static accessTokens = DbAccessTokensProvider.forModel(User, {
-    expiresIn: "7 days"
+    expiresIn: '7 days',
   })
   declare currentAccessToken?: AccessToken
 
@@ -41,6 +41,8 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   }
 
   get initials() {
-    return this.firstName && this.lastName ? `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase() : 'IDK'
+    return this.firstName && this.lastName
+      ? `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase()
+      : 'IDK'
   }
 }

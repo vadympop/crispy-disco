@@ -3,10 +3,16 @@ import { computed, ref } from "vue";
 import type { LoginRequest, SignupRequest, User } from "@/types/api";
 import { client } from "@/lib/client";
 import { LOCALSTORAGE_KEYS } from "@/lib/storage-keys";
+import type { UserStatus } from "@/types/chat";
+
+export type ProfileUpdate = Pick<User, "nickname" | "firstName" | "lastName">;
 
 export const useAuthStore = defineStore("auth", () => {
   const me = ref<User | null>(null);
   const isLoggedIn = computed(() => me.value !== null);
+
+  const userId = computed(() => me.value?.id);
+  const nickname = computed(() => me.value?.nickname);
 
   // true while a stored token is being checked after a page reload
   const isRestoring = ref(false);
@@ -53,14 +59,32 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  // TODO: local only until the backend has an endpoint for the status
+  function setStatus(status: UserStatus) {
+    if (me.value) {
+      me.value.status = status;
+    }
+  }
+
+  // TODO: local only until the backend has a profile update endpoint
+  function updateProfile(profile: ProfileUpdate) {
+    if (me.value) {
+      Object.assign(me.value, profile);
+    }
+  }
+
   return {
     me,
+    userId,
+    nickname,
     isLoggedIn,
     isRestoring,
     clearSession,
     fetchMe,
     login,
     signup,
-    logout
+    logout,
+    setStatus,
+    updateProfile
   };
 });

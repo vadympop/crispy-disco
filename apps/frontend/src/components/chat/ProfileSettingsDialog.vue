@@ -12,7 +12,7 @@
 
           <div class="row items-center no-wrap q-mb-md">
             <UserAvatar
-              :nick-name="form.nickName || chat.me.nickName"
+              :nick-name="form.nickName || auth.nickname || ''"
               :src="form.avatarUrl"
               size="72px"
               class="q-mr-md"
@@ -109,7 +109,7 @@
                 <q-item-label>Notify only for mentions</q-item-label>
                 <q-item-label caption
                   >Ignore messages without @{{
-                    form.nickName || chat.me.nickName
+                    form.nickName || auth.nickname
                   }}</q-item-label
                 >
               </q-item-section>
@@ -152,11 +152,13 @@ import { Notify } from "quasar";
 import type { UserStatus } from "@/types/chat";
 import { STATUS_OPTIONS } from "@/lib/status";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 
 const open = defineModel<boolean>({ required: true });
 
 const chat = useChatStore();
+const auth = useAuthStore();
 const fileInput = useTemplateRef<HTMLInputElement>("fileInput");
 
 // Pictures are scaled down before they are kept, so the store stays small
@@ -164,6 +166,7 @@ const AVATAR_SIZE = 160;
 
 // Nothing is applied until Save; Cancel or closing throws the draft away
 // avatarUrl "" means "no picture"
+// TODO: the avatar is only previewed, there is nowhere to save it yet
 const form = reactive({
   nickName: "",
   firstName: "",
@@ -174,11 +177,11 @@ const form = reactive({
 });
 
 function reset() {
-  form.nickName = chat.me.nickName;
-  form.firstName = chat.me.firstName;
-  form.lastName = chat.me.lastName;
-  form.avatarUrl = chat.me.avatarUrl ?? "";
-  form.status = chat.me.status;
+  form.nickName = auth.nickname ?? "";
+  form.firstName = auth.me?.firstName ?? "";
+  form.lastName = auth.me?.lastName ?? "";
+  form.avatarUrl = "";
+  form.status = (auth.me?.status ?? "online") as UserStatus;
   form.notifyMentionsOnly = chat.notifyMentionsOnly;
 }
 
@@ -237,16 +240,28 @@ async function toSquareAvatar(file: File): Promise<string> {
 }
 
 function onSubmit() {
-  const saved = chat.updateProfile({
-    nickName: form.nickName,
-    firstName: form.firstName.trim(),
-    lastName: form.lastName.trim(),
-    avatarUrl: form.avatarUrl
-  });
-  if (!saved) {
-    return;
+  const oldNick = auth.nickname;
+  const newNick = form.nickName;
+  if (oldNick && newNick !== oldNick) {
+    // the user list still holds a mock copy of me, which doesn't count as taken
+    const owner = chat.findUser(newNick);
+    if (owner && owner.id !== auth.userId) {
+      Notify.create({
+        type: "negative",
+        message: `Nickname ${newNick} is already taken`
+      });
+      return;
+    }
+    chat.renameNick(oldNick, newNick);
   }
-  chat.setStatus(form.status);
+
+  auth.updateProfile({
+    nickname: newNick,
+    firstName: form.firstName.trim(),
+    lastName: form.lastName.trim()
+  });
+  auth.setStatus(form.status);
+  Notify.create({ type: "info", message: "Profile updated" });
   chat.notifyMentionsOnly = form.notifyMentionsOnly;
   open.value = false;
 }

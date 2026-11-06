@@ -6,7 +6,8 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.uuid('id').primary()
-      table.enu('type', ['public', 'private']).notNullable()
+      // direct = a private chat between exactly two users
+      table.enu('type', ['public', 'private', 'direct']).notNullable()
       table
         .uuid('creator_id')
         .notNullable()

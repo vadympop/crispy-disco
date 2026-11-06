@@ -18,4 +18,17 @@ export interface ApiDefinition {
       destroy: typeof routes['profile.access_tokens.destroy']
     }
   }
+  channels: {
+    index: typeof routes['channels.index']
+    join: typeof routes['channels.join']
+    direct: typeof routes['channels.direct']
+    show: typeof routes['channels.show']
+    members: typeof routes['channels.members']
+    cancel: typeof routes['channels.cancel']
+    decline: typeof routes['channels.decline']
+    destroy: typeof routes['channels.destroy']
+  }
+  users: {
+    show: typeof routes['users.show']
+  }
 }
