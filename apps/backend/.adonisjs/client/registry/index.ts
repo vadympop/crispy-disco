@@ -36,6 +36,30 @@ const routes = {
     tokens: [{"old":"/api/v1/channels","type":0,"val":"api","end":""},{"old":"/api/v1/channels","type":0,"val":"v1","end":""},{"old":"/api/v1/channels","type":0,"val":"channels","end":""}],
     types: placeholder as Registry['channels.index']['types'],
   },
+  'channels.join': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/join',
+    tokens: [{"old":"/api/v1/channels/join","type":0,"val":"api","end":""},{"old":"/api/v1/channels/join","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/join","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/join","type":0,"val":"join","end":""}],
+    types: placeholder as Registry['channels.join']['types'],
+  },
+  'channels.cancel': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:name/cancel',
+    tokens: [{"old":"/api/v1/channels/:name/cancel","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:name/cancel","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:name/cancel","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:name/cancel","type":1,"val":"name","end":""},{"old":"/api/v1/channels/:name/cancel","type":0,"val":"cancel","end":""}],
+    types: placeholder as Registry['channels.cancel']['types'],
+  },
+  'channels.decline': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:name/decline',
+    tokens: [{"old":"/api/v1/channels/:name/decline","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:name/decline","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:name/decline","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:name/decline","type":1,"val":"name","end":""},{"old":"/api/v1/channels/:name/decline","type":0,"val":"decline","end":""}],
+    types: placeholder as Registry['channels.decline']['types'],
+  },
+  'channels.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/channels/:name',
+    tokens: [{"old":"/api/v1/channels/:name","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:name","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:name","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:name","type":1,"val":"name","end":""}],
+    types: placeholder as Registry['channels.destroy']['types'],
+  },
 } as const satisfies Record<string, AdonisEndpoint>
 
 export { routes }

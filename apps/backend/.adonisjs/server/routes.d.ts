@@ -9,6 +9,10 @@ export type ScannedRoutes = {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'channels.join': { paramsTuple?: []; params?: {} }
+    'channels.cancel': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.decline': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
   }
   GET: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
@@ -22,6 +26,12 @@ export type ScannedRoutes = {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
     'auth.access_tokens.store': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
+    'channels.join': { paramsTuple?: []; params?: {} }
+    'channels.cancel': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.decline': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+  }
+  DELETE: {
+    'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

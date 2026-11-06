@@ -67,4 +67,52 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['index']>>>
     }
   }
+  'channels.join': {
+    methods: ["POST"]
+    pattern: '/api/v1/channels/join'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/channel').joinChannelValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/channel').joinChannelValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['join']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['join']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'channels.cancel': {
+    methods: ["POST"]
+    pattern: '/api/v1/channels/:name/cancel'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { name: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['cancel']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['cancel']>>>
+    }
+  }
+  'channels.decline': {
+    methods: ["POST"]
+    pattern: '/api/v1/channels/:name/decline'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { name: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['decline']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['decline']>>>
+    }
+  }
+  'channels.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/channels/:name'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { name: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['destroy']>>>
+    }
+  }
 }

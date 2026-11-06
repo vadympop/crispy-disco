@@ -36,6 +36,10 @@ router
     router
       .group(()=> {
         router.get('/', [controllers.Channels, 'index'])
+        router.post('join', [controllers.Channels, 'join'])
+        router.post(':name/cancel', [controllers.Channels, 'cancel'])
+        router.post(':name/decline', [controllers.Channels, 'decline'])
+        router.delete(':name', [controllers.Channels, 'destroy'])
       })
       .prefix('channels')
       .use(middleware.auth())

@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import { Exception } from '@adonisjs/core/exceptions'
-import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import Channel from '#models/channel'
 import type User from '#models/user'
 
@@ -34,14 +33,14 @@ export default class ChannelService {
         return { channelId: newChannel.id, created: true }
       }
 
-      const status = await this.statusOf(user, channel, trx)
+      const status = await this.statusOf(user, channel)
 
       if (status === 'banned') {
         throw new Exception(`You are banned from #${name}`, { status: 403, code: 'E_CHANNEL_BANNED' })
       }
 
       if (status === 'invited') {
-        await this.setStatus(user, channel, 'member', trx)
+        await this.setStatus(user, channel, 'member')
       } else if (status === null) {
         if (channel.type === 'private') {
           throw new Exception(`#${name} is private, you need an invite`, {
@@ -164,29 +163,17 @@ export default class ChannelService {
   }
 
 
-  private async statusOf(
-    user: User,
-    channel: Channel,
-    trx?: TransactionClientContract
-  ): Promise<MemberStatus | null> {
-    const query = channel.related('members').pivotQuery().where('user_id', user.id)
-    if (trx) {
-      query.useTransaction(trx)
-    }
-    const row = await query.first()
+  // Relation queries reuse the channel's transaction when it was loaded inside one
+  private async statusOf(user: User, channel: Channel): Promise<MemberStatus | null> {
+    const row = await channel.related('members').pivotQuery().where('user_id', user.id).first()
     return row ? (row.status as MemberStatus) : null
   }
 
-  private async setStatus(
-    user: User,
-    channel: Channel,
-    status: MemberStatus,
-    trx?: TransactionClientContract
-  ) {
-    const query = channel.related('members').pivotQuery().where('user_id', user.id)
-    if (trx) {
-      query.useTransaction(trx)
-    }
-    await query.update({ status, updated_at: new Date() })
+  private async setStatus(user: User, channel: Channel, status: MemberStatus) {
+    await channel
+      .related('members')
+      .pivotQuery()
+      .where('user_id', user.id)
+      .update({ status, updated_at: new Date() })
   }
 }
