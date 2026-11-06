@@ -11,22 +11,22 @@ export type ScannedRoutes = {
     'channels.index': { paramsTuple?: []; params?: {} }
     'channels.join': { paramsTuple?: []; params?: {} }
     'channels.direct': { paramsTuple?: []; params?: {} }
-    'channels.members': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
-    'channels.cancel': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
-    'channels.decline': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
-    'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   GET: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
-    'channels.members': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
-    'channels.members': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {
@@ -35,11 +35,11 @@ export type ScannedRoutes = {
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'channels.join': { paramsTuple?: []; params?: {} }
     'channels.direct': { paramsTuple?: []; params?: {} }
-    'channels.cancel': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
-    'channels.decline': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   DELETE: {
-    'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
 }
 declare module '@adonisjs/core/types/http' {

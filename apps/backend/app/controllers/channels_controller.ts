@@ -37,26 +37,26 @@ export default class ChannelsController {
     return serialize(ChannelTransformer.transform(channel))
   }
 
-  // GET /channels/:name/members - who is in the channel (/list)
+  // GET /channels/:id/members - who is in the channel (/list)
   async members({ auth, params, serialize }: HttpContext) {
-    const members = await this.channelService.membersOf(auth.getUserOrFail(), params.name)
+    const members = await this.channelService.membersOf(auth.getUserOrFail(), params.id)
     return serialize(PublicProfileTransformer.transform(members))
   }
 
-  // POST /channels/:name/cancel - leave; the channel is deleted if the admin leaves
+  // POST /channels/:id/cancel - leave; the channel is deleted if the admin leaves
   async cancel({ auth, params }: HttpContext) {
-    return this.channelService.cancel(auth.getUserOrFail(), params.name)
+    return this.channelService.cancel(auth.getUserOrFail(), params.id)
   }
 
-  // DELETE /channels/:name - the admin closes the channel
+  // DELETE /channels/:id - the admin closes the channel
   async destroy({ auth, params, response }: HttpContext) {
-    await this.channelService.quit(auth.getUserOrFail(), params.name)
+    await this.channelService.quit(auth.getUserOrFail(), params.id)
     return response.noContent()
   }
 
-  // POST /channels/:name/decline - refuse an invite
+  // POST /channels/:id/decline - refuse an invite
   async decline({ auth, params, response }: HttpContext) {
-    await this.channelService.decline(auth.getUserOrFail(), params.name)
+    await this.channelService.decline(auth.getUserOrFail(), params.id)
     return response.noContent()
   }
 }

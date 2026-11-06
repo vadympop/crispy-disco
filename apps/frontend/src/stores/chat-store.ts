@@ -145,8 +145,12 @@ export const useChatStore = defineStore("chat", () => {
 
   // The members of a channel, always fresh from the server (/list)
   async function fetchMembers(channelName: string): Promise<PublicProfile[]> {
+    const channel = findChannel(channelName);
+    if (!channel) {
+      return [];
+    }
     const result = await client.api.channels.members({
-      params: { name: channelName }
+      params: { id: channel.id }
     });
     return result.data;
   }
@@ -278,7 +282,7 @@ export const useChatStore = defineStore("chat", () => {
     // read it before the channel is gone: "#general" or the other person's nick
     const label = channelLabel(name);
     const { channelDeleted } = await client.api.channels.cancel({
-      params: { name }
+      params: { id: channel.id }
     });
     forgetChannel(name);
     notifyInfo(channelDeleted ? `${label} was deleted` : `You left ${label}`);
@@ -293,7 +297,7 @@ export const useChatStore = defineStore("chat", () => {
     }
 
     const label = channelLabel(name);
-    await client.api.channels.destroy({ params: { name } });
+    await client.api.channels.destroy({ params: { id: channel.id } });
     forgetChannel(name);
     notifyInfo(`${label} was deleted`);
     return true;
@@ -305,7 +309,11 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   async function declineInvite(name: string) {
-    await client.api.channels.decline({ params: { name } });
+    const channel = findChannel(name);
+    if (!channel) {
+      return;
+    }
+    await client.api.channels.decline({ params: { id: channel.id } });
     removeChannel(name);
   }
 

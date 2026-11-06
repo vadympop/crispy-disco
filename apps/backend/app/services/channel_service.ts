@@ -107,11 +107,11 @@ export default class ChannelService {
   }
 
   // The members of a channel; only its own members may see the list
-  async membersOf(user: User, name: string) {
-    const channel = await this.findByNameOrFail(name)
+  async membersOf(user: User, channelId: string) {
+    const channel = await this.findOrFail(channelId)
 
     if ((await this.statusOf(user, channel)) !== 'member') {
-      throw new Exception(`You are not a member of #${name}`, {
+      throw new Exception(`You are not a member of #${channel.name}`, {
         status: 403,
         code: 'E_NOT_A_MEMBER',
       })
@@ -120,12 +120,12 @@ export default class ChannelService {
     return channel.related('members').query().wherePivot('status', 'member').orderBy('nickname')
   }
 
-  async cancel(user: User, name: string) {
-    const channel = await this.findByNameOrFail(name)
+  async cancel(user: User, channelId: string) {
+    const channel = await this.findOrFail(channelId)
     const status = await this.statusOf(user, channel)
 
     if (status !== 'member') {
-      throw new Exception(`You are not a member of #${name}`, {
+      throw new Exception(`You are not a member of #${channel.name}`, {
         status: 404,
         code: 'E_NOT_A_MEMBER',
       })
@@ -141,8 +141,8 @@ export default class ChannelService {
     return { channelDeleted: false }
   }
 
-  async quit(user: User, name: string) {
-    const channel = await this.findByNameOrFail(name)
+  async quit(user: User, channelId: string) {
+    const channel = await this.findOrFail(channelId)
 
     // in a direct chat both people can delete it
     const canDelete =
@@ -158,12 +158,12 @@ export default class ChannelService {
     await channel.delete()
   }
 
-  async decline(user: User, name: string) {
-    const channel = await this.findByNameOrFail(name)
+  async decline(user: User, channelId: string) {
+    const channel = await this.findOrFail(channelId)
     const status = await this.statusOf(user, channel)
 
     if (status !== 'invited') {
-      throw new Exception(`You have no invite to #${name}`, {
+      throw new Exception(`You have no invite to #${channel.name}`, {
         status: 404,
         code: 'E_NO_INVITE',
       })
@@ -206,10 +206,10 @@ export default class ChannelService {
     return channel.creatorId === user.id
   }
 
-  private async findByNameOrFail(name: string) {
-    const channel = await Channel.findBy('name', name)
+  private async findOrFail(channelId: string) {
+    const channel = await Channel.find(channelId)
     if (!channel) {
-      throw new Exception(`Channel #${name} does not exist`, {
+      throw new Exception('That channel does not exist', {
         status: 404,
         code: 'E_CHANNEL_NOT_FOUND',
       })

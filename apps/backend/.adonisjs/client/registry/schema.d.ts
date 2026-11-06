@@ -93,11 +93,11 @@ export interface Registry {
   }
   'channels.members': {
     methods: ["GET","HEAD"]
-    pattern: '/api/v1/channels/:name/members'
+    pattern: '/api/v1/channels/:id/members'
     types: {
       body: {}
       paramsTuple: [ParamValue]
-      params: { name: ParamValue }
+      params: { id: ParamValue }
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['members']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['members']>>>
@@ -105,11 +105,11 @@ export interface Registry {
   }
   'channels.cancel': {
     methods: ["POST"]
-    pattern: '/api/v1/channels/:name/cancel'
+    pattern: '/api/v1/channels/:id/cancel'
     types: {
       body: {}
       paramsTuple: [ParamValue]
-      params: { name: ParamValue }
+      params: { id: ParamValue }
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['cancel']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['cancel']>>>
@@ -117,11 +117,11 @@ export interface Registry {
   }
   'channels.decline': {
     methods: ["POST"]
-    pattern: '/api/v1/channels/:name/decline'
+    pattern: '/api/v1/channels/:id/decline'
     types: {
       body: {}
       paramsTuple: [ParamValue]
-      params: { name: ParamValue }
+      params: { id: ParamValue }
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['decline']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['decline']>>>
@@ -129,11 +129,11 @@ export interface Registry {
   }
   'channels.destroy': {
     methods: ["DELETE"]
-    pattern: '/api/v1/channels/:name'
+    pattern: '/api/v1/channels/:id'
     types: {
       body: {}
       paramsTuple: [ParamValue]
-      params: { name: ParamValue }
+      params: { id: ParamValue }
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['destroy']>>>
