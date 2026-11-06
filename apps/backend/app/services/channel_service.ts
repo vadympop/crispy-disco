@@ -106,6 +106,27 @@ export default class ChannelService {
     return { channel: await this.findForUser(user, channelId), created }
   }
 
+  // One channel the user is a member of or invited to
+  async findOne(user: User, channelId: string) {
+    const channel = await user
+      .related('channels')
+      .query()
+      .where('channels.id', channelId)
+      .whereNotPivot('status', 'banned')
+      .preload('creator')
+      .first()
+
+    if (!channel) {
+      throw new Exception('That channel does not exist', {
+        status: 404,
+        code: 'E_CHANNEL_NOT_FOUND',
+      })
+    }
+
+    await this.loadDirectMembers([channel])
+    return channel
+  }
+
   // The members of a channel; only its own members may see the list
   async membersOf(user: User, channelId: string) {
     const channel = await this.findOrFail(channelId)

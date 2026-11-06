@@ -48,6 +48,12 @@ const routes = {
     tokens: [{"old":"/api/v1/channels/direct","type":0,"val":"api","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/direct","type":0,"val":"direct","end":""}],
     types: placeholder as Registry['channels.direct']['types'],
   },
+  'channels.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/channels/:id',
+    tokens: [{"old":"/api/v1/channels/:id","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['channels.show']['types'],
+  },
   'channels.members': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/channels/:id/members',

@@ -39,6 +39,7 @@ router
         router.post('join', [controllers.Channels, 'join'])
         router.post('direct', [controllers.Channels, 'direct'])
         // channels are addressed by id: a name can be reused after the channel is gone
+        router.get(':id', [controllers.Channels, 'show'])
         router.get(':id/members', [controllers.Channels, 'members'])
         router.post(':id/cancel', [controllers.Channels, 'cancel'])
         router.post(':id/decline', [controllers.Channels, 'decline'])

@@ -11,6 +11,7 @@ export type ScannedRoutes = {
     'channels.index': { paramsTuple?: []; params?: {} }
     'channels.join': { paramsTuple?: []; params?: {} }
     'channels.direct': { paramsTuple?: []; params?: {} }
+    'channels.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -20,12 +21,14 @@ export type ScannedRoutes = {
   GET: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'channels.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'channels.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }

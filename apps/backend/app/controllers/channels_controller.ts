@@ -37,6 +37,12 @@ export default class ChannelsController {
     return serialize(ChannelTransformer.transform(channel))
   }
 
+  // GET /channels/:id - one channel I am a member of or invited to
+  async show({ auth, params, serialize }: HttpContext) {
+    const channel = await this.channelService.findOne(auth.getUserOrFail(), params.id)
+    return serialize(ChannelTransformer.transform(channel))
+  }
+
   // GET /channels/:id/members - who is in the channel (/list)
   async members({ auth, params, serialize }: HttpContext) {
     const members = await this.channelService.membersOf(auth.getUserOrFail(), params.id)
