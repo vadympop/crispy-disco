@@ -12,7 +12,7 @@ export default class Channel extends ChannelSchema {
     channel.id = randomUUID()
   }
 
-  @belongsTo(() => User)
+  @belongsTo(() => User, { foreignKey: 'creatorId' })
   declare creator: BelongsTo<typeof User>
 
   @manyToMany(() => User, {

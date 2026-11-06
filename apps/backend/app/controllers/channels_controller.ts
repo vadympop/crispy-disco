@@ -1,19 +1,15 @@
+import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
+import ChannelService from '#services/channel_service'
 import ChannelTransformer from '#transformers/channel_transformer'
 
+@inject()
 export default class ChannelsController {
-  /**
-   * Channels the logged-in user is a member of or invited to
-   */
+    
+  constructor(protected channelService: ChannelService) {}
+
   async index({ auth, serialize }: HttpContext) {
-    const user = auth.getUserOrFail()
-
-    const channels = await user
-      .related('channels')
-      .query()
-      .whereNotPivot('status', 'banned')
-      .preload('creator')
-
+    const channels = await this.channelService.listFor(auth.getUserOrFail())
     return serialize(ChannelTransformer.transform(channels))
   }
 }
