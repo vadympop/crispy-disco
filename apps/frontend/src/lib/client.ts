@@ -3,7 +3,7 @@ import { registry } from "@cisco-disco/backend/registry";
 import { LOCALSTORAGE_KEYS } from '@/lib/storage-keys'
 
 export const client = createTuyau({
-  baseUrl: import.meta.env.API_URL || "http://localhost:3333",
+  baseUrl: import.meta.env.API_URL,
   registry,
   headers: { Accept: "application/json" },
   hooks: {

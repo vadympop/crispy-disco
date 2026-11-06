@@ -36,6 +36,14 @@ export default defineConfig(ctx => {
         // node: 'node22'
       },
 
+      // Backend URL, available as import.meta.env.API_URL in client code and
+      // as %API_URL% in index.html (Content-Security-Policy connect-src).
+      // Override with `API_URL=https://... quasar build`.
+      // https://v2.quasar.dev/quasar-cli-vite/handling-import-meta-env#with-quasar-config-file
+      defineEnv: {
+        API_URL: process.env.API_URL ?? "http://localhost:3333"
+      },
+
       typescript: {
         strict: true,
         vueShim: true
