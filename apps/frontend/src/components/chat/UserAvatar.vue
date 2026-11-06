@@ -1,6 +1,7 @@
 <template>
   <q-avatar :size="size" text-color="white" :class="avatarClass">
-    {{ nickName.charAt(0).toUpperCase() }}
+    <img v-if="src" :src="src" :alt="nickName" />
+    <template v-else>{{ nickName.charAt(0).toUpperCase() }}</template>
     <slot />
   </q-avatar>
 </template>
@@ -13,15 +14,19 @@ const props = withDefaults(
   defineProps<{
     nickName: string;
     size?: string;
-    // the settings dialog shows my avatar while the nickname is being edited
-    isOwn?: boolean;
+    // a picture that isn't saved yet (preview in the settings dialog)
+    // TODO: users have no avatar on the API yet, so this is the only source
+    src?: string | null;
   }>(),
-  { size: "36px", isOwn: false }
+  { size: "36px", src: null }
 );
 
 const auth = useAuthStore();
 
-const isMe = computed(() => props.isOwn || props.nickName === auth.nickname);
+// a preview is always of me, even while the nickname is being edited
+const isMe = computed(
+  () => props.src !== null || props.nickName === auth.nickname
+);
 
 const avatarClass = computed(() =>
   isMe.value ? "avatar-own" : "avatar-other"
