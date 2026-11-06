@@ -26,4 +26,7 @@ export interface ApiDefinition {
     decline: typeof routes['channels.decline']
     destroy: typeof routes['channels.destroy']
   }
+  users: {
+    show: typeof routes['users.show']
+  }
 }

@@ -44,5 +44,12 @@ router
       })
       .prefix('channels')
       .use(middleware.auth())
+
+    router
+      .group(() => {
+        router.get(':id', [controllers.Users, 'show'])
+      })
+      .prefix('users')
+      .use(middleware.auth())
   })
   .prefix('/api/v1')

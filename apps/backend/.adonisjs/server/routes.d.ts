@@ -14,14 +14,17 @@ export type ScannedRoutes = {
     'channels.cancel': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.decline': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'name': ParamValue} }
+    'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   GET: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'channels.index': { paramsTuple?: []; params?: {} }
+    'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
