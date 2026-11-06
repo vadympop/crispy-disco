@@ -230,7 +230,7 @@ export const useChatStore = defineStore("chat", () => {
   // Returns the channel name to navigate to.
   async function startDirectChat(user: User): Promise<string> {
     const result = await client.api.channels.direct({
-      body: { nickname: user.nickname }
+      body: { userId: user.id }
     });
     upsertChannel(result.data);
     return result.data.name;

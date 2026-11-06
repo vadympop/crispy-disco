@@ -21,5 +21,5 @@ export const joinChannelValidator = vine.create({
  * Start a direct chat with another user
  */
 export const startDirectValidator = vine.create({
-  nickname: vine.string().trim(),
+  userId: vine.string().uuid(),
 })

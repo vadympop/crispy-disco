@@ -31,8 +31,8 @@ export default class ChannelsController {
 
   // POST /channels/direct - open the direct chat with a user, creating it the first time
   async direct({ auth, request, serialize }: HttpContext) {
-    const { nickname } = await request.validateUsing(startDirectValidator)
-    const channel = await this.channelService.startDirect(auth.getUserOrFail(), nickname)
+    const { userId } = await request.validateUsing(startDirectValidator)
+    const channel = await this.channelService.startDirect(auth.getUserOrFail(), userId)
     return serialize(ChannelTransformer.transform(channel))
   }
 

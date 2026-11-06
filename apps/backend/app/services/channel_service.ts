@@ -20,11 +20,11 @@ export default class ChannelService {
     return channels
   }
 
-  // Opens the direct chat with `nickname`, creating it the first time
-  async startDirect(user: User, nickname: string) {
-    const partner = await User.findBy('nickname', nickname)
+  // Opens the direct chat with the user `partnerId`, creating it the first time
+  async startDirect(user: User, partnerId: string) {
+    const partner = await User.find(partnerId)
     if (!partner) {
-      throw new Exception(`User ${nickname} does not exist`, {
+      throw new Exception('That user does not exist', {
         status: 404,
         code: 'E_USER_NOT_FOUND',
       })
