@@ -159,18 +159,19 @@ const invites = computed(() => chat.sortedChannels.filter(c => c.invited));
 const joined = computed(() => chat.sortedChannels.filter(c => !c.invited));
 
 async function accept(name: string) {
-  chat.acceptInvite(name);
-  await router.push(`/channels/${name}`);
+  if (await chat.acceptInvite(name)) {
+    await router.push(`/channels/${name}`);
+  }
 }
 
 // After leaving/deleting the open channel, go back to the welcome screen
 async function leave(name: string) {
-  chat.leaveChannel(name);
+  await chat.leaveChannel(name);
   await goHomeIfOpen(name);
 }
 
 async function remove(name: string) {
-  chat.deleteChannel(name);
+  await chat.deleteChannel(name);
   await goHomeIfOpen(name);
 }
 

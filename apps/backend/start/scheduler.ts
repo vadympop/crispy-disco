@@ -1,13 +1,3 @@
-/*
-|--------------------------------------------------------------------------
-| Scheduler
-|--------------------------------------------------------------------------
-|
-| Background jobs of the web server. Loaded only in the "web" environment
-| (see adonisrc.ts), so ace commands like migrations don't start them.
-|
-*/
-
 import app from '@adonisjs/core/services/app'
 import logger from '@adonisjs/core/services/logger'
 import ChannelService, { CHANNEL_EXPIRY_DAYS } from '#services/channel_service'
@@ -28,8 +18,11 @@ async function deleteInactiveChannels() {
   }
 }
 
-// Once at startup, then every hour
-void deleteInactiveChannels()
-const timer = setInterval(deleteInactiveChannels, ONE_HOUR)
+let timer: NodeJS.Timeout | undefined
+
+app.ready(() => {
+  void deleteInactiveChannels()
+  timer = setInterval(deleteInactiveChannels, ONE_HOUR)
+})
 
 app.terminating(() => clearInterval(timer))

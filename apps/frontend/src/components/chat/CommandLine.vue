@@ -189,7 +189,7 @@ async function submit() {
     return;
   }
 
-  const result = chat.runCommand(value, props.channel);
+  const result = await chat.runCommand(value, props.channel);
   if (result.showMembers) {
     emit("showMembers");
   }

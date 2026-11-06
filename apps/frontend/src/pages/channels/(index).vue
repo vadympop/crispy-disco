@@ -85,8 +85,9 @@ const router = useRouter();
 const invites = computed(() => chat.sortedChannels.filter(c => c.invited));
 
 async function accept(name: string) {
-  chat.acceptInvite(name);
-  await router.push(`/channels/${name}`);
+  if (await chat.acceptInvite(name)) {
+    await router.push(`/channels/${name}`);
+  }
 }
 </script>
 

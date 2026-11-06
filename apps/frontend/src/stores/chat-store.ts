@@ -12,6 +12,8 @@ import type {
 } from "@/types/chat";
 import type { ApiChannel } from "@/types/api";
 import { client } from "@/lib/client";
+import { apiErrorMessage } from "@/lib/api-error";
+import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
 import {
   generateHistory,
@@ -59,12 +61,12 @@ function toChannel(channel: ApiChannel): Channel {
 }
 
 export const useChatStore = defineStore("chat", () => {
+  const auth = useAuthStore();
   const me = ref<User>({ ...mockMe });
   const users = ref<User[]>(mockUsers.map(user => ({ ...user })));
   // Filled from the API by fetchChannels()
   const channels = ref<Channel[]>([]);
   const isLoadingChannels = ref(false);
-  const otherChannels = ref<Channel[]>(mockOtherChannels.map(c => ({ ...c })));
   const members = ref<Record<string, string[]>>(structuredClone(mockMembers));
   const bans = ref<Record<string, string[]>>({});
   // channel -> kicked nick -> nicks of members who voted for the kick
@@ -125,8 +127,23 @@ export const useChatStore = defineStore("chat", () => {
     return channel.directWith ? channelTitle(channel) : `#${channel.name}`;
   }
 
+  // The logged-in user's nick; the mock one only until the profile is loaded
+  function myNick() {
+    return auth.me?.nickname ?? me.value.nickName;
+  }
+
   function isAdmin(channel: Channel) {
-    return channel.adminNick === me.value.nickName;
+    return channel.adminNick === myNick();
+  }
+
+  // Adds the channel, or replaces the one with the same name
+  function upsertChannel(channel: Channel) {
+    const index = channels.value.findIndex(c => c.name === channel.name);
+    if (index === -1) {
+      channels.value.push(channel);
+    } else {
+      channels.value[index] = channel;
+    }
   }
 
   function membersOf(channelName: string): User[] {
@@ -170,44 +187,34 @@ export const useChatStore = defineStore("chat", () => {
     channel.lastMessageAt = message.createdAt;
   }
 
-  function joinChannel(name: string, isPrivate: boolean): boolean {
+  // /join: joins a public channel, accepts an invite, or creates the channel.
+  // The server decides (private channels and bans are refused there).
+  async function joinChannel(name: string, isPrivate: boolean): Promise<boolean> {
     const mine = findChannel(name);
-    if (mine) {
-      if (mine.invited) {
-        acceptInvite(name);
-      }
+    if (mine && !mine.invited) {
       return true;
     }
 
-    if (bans.value[name]?.includes(me.value.nickName)) {
-      notifyError(`You are banned from #${name}`);
+    try {
+      const result = await client.api.channels.join({ body: { name, isPrivate } });
+      const { channel, created } = result.data;
+      upsertChannel(toChannel(channel));
+
+      const current = members.value[name] ?? [];
+      if (!current.includes(me.value.nickName)) {
+        members.value[name] = [...current, me.value.nickName];
+      }
+
+      if (created) {
+        notifyInfo(`Created ${channel.isPrivate ? "private" : "public"} channel #${name}`);
+      } else {
+        notifyInfo(`Joined #${name}`);
+      }
+      return true;
+    } catch (error) {
+      notifyError(apiErrorMessage(error, `Could not join #${name}`));
       return false;
     }
-
-    const existing = otherChannels.value.find(c => c.name === name);
-    if (existing) {
-      if (existing.isPrivate) {
-        notifyError(`#${name} is private, you need an invite`);
-        return false;
-      }
-      otherChannels.value = otherChannels.value.filter(c => c !== existing);
-      channels.value.push(existing);
-      members.value[name] = [...(members.value[name] ?? []), me.value.nickName];
-      notifyInfo(`Joined #${name}`);
-      return true;
-    }
-
-    // The channel doesn't exist yet, so the user creates it and becomes admin
-    channels.value.push({
-      name,
-      isPrivate,
-      adminNick: me.value.nickName,
-      invited: false,
-      lastMessageAt: new Date().toISOString()
-    });
-    members.value[name] = [me.value.nickName];
-    notifyInfo(`Created ${isPrivate ? "private" : "public"} channel #${name}`);
-    return true;
   }
 
   // Opens the private chat with `nick`, creating it the first time.
@@ -255,56 +262,76 @@ export const useChatStore = defineStore("chat", () => {
     channels.value = channels.value.filter(channel => channel.name !== name);
   }
 
-  function leaveChannel(name: string) {
-    const channel = findChannel(name);
-    if (!channel) {
-      return;
-    }
-
-    // When the admin leaves, the channel ceases to exist
-    if (isAdmin(channel)) {
-      deleteChannel(name);
-      return;
-    }
-
-    removeChannel(name);
-    members.value[name] = (members.value[name] ?? []).filter(
-      nick => nick !== me.value.nickName
-    );
-    otherChannels.value.push(channel);
-    notifyInfo(`You left #${name}`);
-  }
-
-  function deleteChannel(name: string) {
-    const channel = findChannel(name);
-    if (!channel) {
-      return;
-    }
-    if (!isAdmin(channel)) {
-      notifyError("Only the admin can delete the channel");
-      return;
-    }
-
+  // Local cleanup once the user is no longer in the channel
+  function forgetChannel(name: string) {
     removeChannel(name);
     delete members.value[name];
     delete messagesByChannel.value[name];
-    notifyInfo(
-      channel.directWith
-        ? `Chat with ${channelTitle(channel)} was deleted`
-        : `#${name} was deleted`
-    );
   }
 
-  function acceptInvite(name: string) {
+  // /cancel: leave the channel. When the admin leaves, the server deletes it.
+  async function leaveChannel(name: string): Promise<boolean> {
     const channel = findChannel(name);
-    if (channel) {
-      channel.invited = false;
-      members.value[name] = [...(members.value[name] ?? []), me.value.nickName];
+    if (!channel) {
+      return false;
+    }
+
+    // direct chats exist only in the browser for now
+    if (!channel.id) {
+      forgetChannel(name);
+      notifyInfo(`You left ${channelLabel(name)}`);
+      return true;
+    }
+
+    try {
+      const { channelDeleted } = await client.api.channels.cancel({ params: { name } });
+      forgetChannel(name);
+      notifyInfo(channelDeleted ? `#${name} was deleted` : `You left #${name}`);
+      return true;
+    } catch (error) {
+      notifyError(apiErrorMessage(error, `Could not leave #${name}`));
+      return false;
     }
   }
 
-  function declineInvite(name: string) {
-    removeChannel(name);
+  // /quit: the admin closes the channel (the server checks the admin rights)
+  async function deleteChannel(name: string): Promise<boolean> {
+    const channel = findChannel(name);
+    if (!channel) {
+      return false;
+    }
+
+    if (!channel.id) {
+      forgetChannel(name);
+      notifyInfo(`Chat with ${channelTitle(channel)} was deleted`);
+      return true;
+    }
+
+    try {
+      await client.api.channels.destroy({ params: { name } });
+      forgetChannel(name);
+      notifyInfo(`#${name} was deleted`);
+      return true;
+    } catch (error) {
+      notifyError(apiErrorMessage(error, `Could not delete #${name}`));
+      return false;
+    }
+  }
+
+  // Accepting an invite is the same as joining the channel
+  function acceptInvite(name: string): Promise<boolean> {
+    return joinChannel(name, false);
+  }
+
+  async function declineInvite(name: string): Promise<boolean> {
+    try {
+      await client.api.channels.decline({ params: { name } });
+      removeChannel(name);
+      return true;
+    } catch (error) {
+      notifyError(apiErrorMessage(error, `Could not decline the invite to #${name}`));
+      return false;
+    }
   }
 
   function setStatus(status: UserStatus) {
@@ -357,7 +384,7 @@ export const useChatStore = defineStore("chat", () => {
         message.authorNick = rename(message.authorNick);
       }
     }
-    for (const channel of [...channels.value, ...otherChannels.value]) {
+    for (const channel of channels.value) {
       channel.adminNick = rename(channel.adminNick);
     }
     for (const lists of [members.value, bans.value]) {
@@ -462,10 +489,10 @@ export const useChatStore = defineStore("chat", () => {
     );
   }
 
-  function runCommand(
+  async function runCommand(
     input: string,
     channelName: string | null
-  ): CommandResult {
+  ): Promise<CommandResult> {
     const command = parseCommand(input);
     if (!command) {
       return {};
@@ -477,7 +504,7 @@ export const useChatStore = defineStore("chat", () => {
         notifyError("Usage: /join channelName [private]");
         return {};
       }
-      const ok = joinChannel(firstArg, secondArg === "private");
+      const ok = await joinChannel(firstArg, secondArg === "private");
       return ok ? { navigateTo: `/channels/${firstArg}` } : {};
     }
 
@@ -512,15 +539,9 @@ export const useChatStore = defineStore("chat", () => {
       case "list":
         return { showMembers: true };
       case "cancel":
-        leaveChannel(channel.name);
-        return { navigateTo: "/channels" };
+        return (await leaveChannel(channel.name)) ? { navigateTo: "/channels" } : {};
       case "quit":
-        if (!isAdmin(channel)) {
-          notifyError("Only the admin can close the channel");
-          return {};
-        }
-        deleteChannel(channel.name);
-        return { navigateTo: "/channels" };
+        return (await deleteChannel(channel.name)) ? { navigateTo: "/channels" } : {};
       default:
         notifyError(`Unknown command /${command.name}`);
         return {};

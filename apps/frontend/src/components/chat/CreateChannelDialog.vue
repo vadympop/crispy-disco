@@ -61,7 +61,7 @@ const isChannelName = (val: string) =>
   /^[a-zA-Z0-9_-]{2,30}$/.test(val) || "2-30 characters: letters, numbers, _ -";
 
 async function onSubmit() {
-  if (chat.joinChannel(name.value, isPrivate.value)) {
+  if (await chat.joinChannel(name.value, isPrivate.value)) {
     open.value = false;
     await router.push(`/channels/${name.value}`);
   }
