@@ -25,7 +25,8 @@ export default class ChannelsController {
     if (created) {
       response.status(201)
     }
-    return serialize({ channel: ChannelTransformer.transform(channel), created })
+    // depth(2): the channel is nested in this object, and its creator one level deeper
+    return serialize({ channel: ChannelTransformer.transform(channel).depth(2), created })
   }
 
   // POST /channels/:name/cancel - leave; the channel is deleted if the admin leaves

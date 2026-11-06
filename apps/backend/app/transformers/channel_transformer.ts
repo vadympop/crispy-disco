@@ -1,5 +1,6 @@
 import { BaseTransformer } from '@adonisjs/core/transformers'
 import type Channel from '#models/channel'
+import UserSummaryTransformer from '#transformers/user_summary_transformer'
 
 export default class ChannelTransformer extends BaseTransformer<Channel> {
   toObject() {
@@ -8,7 +9,8 @@ export default class ChannelTransformer extends BaseTransformer<Channel> {
     return {
       ...this.pick(channel, ['id', 'name']),
       isPrivate: channel.type === 'private',
-      adminNick: channel.creator.nickname,
+      // the creator is the admin; ChannelService always preloads it
+      creator: UserSummaryTransformer.transform(channel.creator),
       invited: channel.$extras.pivot_status === 'invited',
       lastMessageAt: (channel.lastActivityAt ?? channel.createdAt)?.toISO() ?? '',
     }
