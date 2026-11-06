@@ -12,6 +12,11 @@ export default class Channel extends ChannelSchema {
     channel.id = randomUUID()
   }
 
+  // a private chat between exactly two users
+  get isDirect() {
+    return this.type === 'direct'
+  }
+
   @belongsTo(() => User, { foreignKey: 'creatorId' })
   declare creator: BelongsTo<typeof User>
 
