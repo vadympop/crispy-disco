@@ -20,7 +20,6 @@ export default class ChannelService {
     return channels
   }
 
-  // Opens the direct chat with the user `partnerId`, creating it the first time
   async startDirect(user: User, partnerId: string) {
     const partner = await User.find(partnerId)
     if (!partner) {
@@ -106,7 +105,6 @@ export default class ChannelService {
     return { channel: await this.findForUser(user, channelId), created }
   }
 
-  // One channel the user is a member of or invited to
   async findOne(user: User, channelId: string) {
     const channel = await user
       .related('channels')
@@ -127,7 +125,6 @@ export default class ChannelService {
     return channel
   }
 
-  // The members of a channel; only its own members may see the list
   async membersOf(user: User, channelId: string) {
     const channel = await this.findOrFail(channelId)
 
@@ -152,7 +149,7 @@ export default class ChannelService {
       })
     }
 
-    // a direct chat can't continue with one person, so leaving deletes it
+    // leaving direct chat deletes it
     if (this.isAdmin(user, channel) || channel.isDirect) {
       await channel.delete()
       return { channelDeleted: true }
@@ -165,7 +162,6 @@ export default class ChannelService {
   async quit(user: User, channelId: string) {
     const channel = await this.findOrFail(channelId)
 
-    // in a direct chat both people can delete it
     const canDelete =
       this.isAdmin(user, channel) ||
       (channel.isDirect && (await this.statusOf(user, channel)) === 'member')
