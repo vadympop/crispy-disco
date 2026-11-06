@@ -106,6 +106,20 @@ export default class ChannelService {
     return { channel: await this.findForUser(user, channelId), created }
   }
 
+  // The members of a channel; only its own members may see the list
+  async membersOf(user: User, name: string) {
+    const channel = await this.findByNameOrFail(name)
+
+    if ((await this.statusOf(user, channel)) !== 'member') {
+      throw new Exception(`You are not a member of #${name}`, {
+        status: 403,
+        code: 'E_NOT_A_MEMBER',
+      })
+    }
+
+    return channel.related('members').query().wherePivot('status', 'member').orderBy('nickname')
+  }
+
   async cancel(user: User, name: string) {
     const channel = await this.findByNameOrFail(name)
     const status = await this.statusOf(user, channel)

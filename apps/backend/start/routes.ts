@@ -38,6 +38,7 @@ router
         router.get('/', [controllers.Channels, 'index'])
         router.post('join', [controllers.Channels, 'join'])
         router.post('direct', [controllers.Channels, 'direct'])
+        router.get(':name/members', [controllers.Channels, 'members'])
         router.post(':name/cancel', [controllers.Channels, 'cancel'])
         router.post(':name/decline', [controllers.Channels, 'decline'])
         router.delete(':name', [controllers.Channels, 'destroy'])

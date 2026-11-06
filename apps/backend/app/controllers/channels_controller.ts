@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import ChannelService from '#services/channel_service'
 import ChannelTransformer from '#transformers/channel_transformer'
+import PublicProfileTransformer from '#transformers/public_profile_transformer'
 import { joinChannelValidator, startDirectValidator } from '#validators/channel'
 
 @inject()
@@ -34,6 +35,12 @@ export default class ChannelsController {
     const { userId } = await request.validateUsing(startDirectValidator)
     const channel = await this.channelService.startDirect(auth.getUserOrFail(), userId)
     return serialize(ChannelTransformer.transform(channel))
+  }
+
+  // GET /channels/:name/members - who is in the channel (/list)
+  async members({ auth, params, serialize }: HttpContext) {
+    const members = await this.channelService.membersOf(auth.getUserOrFail(), params.name)
+    return serialize(PublicProfileTransformer.transform(members))
   }
 
   // POST /channels/:name/cancel - leave; the channel is deleted if the admin leaves

@@ -91,6 +91,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['direct']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'channels.members': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/channels/:name/members'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { name: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['members']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/channels_controller').default['members']>>>
+    }
+  }
   'channels.cancel': {
     methods: ["POST"]
     pattern: '/api/v1/channels/:name/cancel'
