@@ -13,7 +13,7 @@
 
         <q-toolbar-title v-if="channel" class="row items-center no-wrap">
           <UserAvatar
-            v-if="channel.directWithId"
+            v-if="channel.isDirect"
             :nick-name="chat.directPartner(channel)?.nickname ?? ''"
             size="28px"
             class="q-mr-sm cursor-pointer"
@@ -30,7 +30,7 @@
           />
           <span class="ellipsis">{{ chat.channelTitle(channel) }}</span>
           <q-badge
-            v-if="chat.isAdmin(channel) && !channel.directWithId"
+            v-if="chat.isAdmin(channel) && !channel.isDirect"
             text-color="dark"
             label="admin"
             class="admin-badge q-ml-sm"

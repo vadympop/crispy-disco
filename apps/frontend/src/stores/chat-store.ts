@@ -17,10 +17,6 @@ import {
 const PAGE_SIZE = 20;
 const KICKS_TO_BAN = 3;
 
-// Direct chats exist only in the browser for now, so the API channel
-// doesn't know about them. directWithId is the id of the other person.
-export type ChatChannel = Channel & { directWithId?: string };
-
 // What the UI should do after a command ran
 export interface CommandResult {
   navigateTo?: string;
@@ -65,7 +61,7 @@ export const useChatStore = defineStore("chat", () => {
     })) as unknown as User[]
   );
   // Filled from the API by fetchChannels()
-  const channels = ref<ChatChannel[]>([]);
+  const channels = ref<Channel[]>([]);
   const isLoadingChannels = ref(false);
   // All three are keyed by channel name and hold user ids
   const members = ref<Record<string, string[]>>(mockMembersToIds());
@@ -113,20 +109,18 @@ export const useChatStore = defineStore("chat", () => {
     return users.value.find(user => user.id === id);
   }
 
-  // The other person in a direct chat; undefined for normal channels
-  function directPartner(channel: ChatChannel) {
-    return channel.directWithId
-      ? findUserById(channel.directWithId)
-      : undefined;
+  // The other person in a direct chat; undefined for normal channels.
+  // The server sends the members only for direct chats.
+  function directPartner(channel: Channel) {
+    if (!channel.isDirect) {
+      return undefined;
+    }
+    return channel.members?.find(member => member.id !== auth.userId);
   }
 
-  // Direct chats are titled with the other person's name, channels with theirs
-  function channelTitle(channel: ChatChannel): string {
-    if (!channel.directWithId) {
-      return channel.name;
-    }
-    const user = directPartner(channel);
-    return user ? `${user.firstName} ${user.lastName}` : channel.name;
+  // Direct chats are titled with the other person's nick, channels with theirs
+  function channelTitle(channel: Channel): string {
+    return directPartner(channel)?.nickname ?? channel.name;
   }
 
   // How a channel is referred to in sentences: "#general" or "Ed Horvath"
@@ -135,15 +129,16 @@ export const useChatStore = defineStore("chat", () => {
     if (!channel) {
       return `#${name}`;
     }
-    return channel.directWithId ? channelTitle(channel) : `#${channel.name}`;
+    return channel.isDirect ? channelTitle(channel) : `#${channel.name}`;
   }
 
-  function isAdmin(channel: ChatChannel) {
-    return channel.creator.id === auth.userId;
+  // In a direct chat both people can delete it, like the server allows
+  function isAdmin(channel: Channel) {
+    return channel.isDirect || channel.creator.id === auth.userId;
   }
 
   // Adds the channel, or replaces the one with the same name
-  function upsertChannel(channel: ChatChannel) {
+  function upsertChannel(channel: Channel) {
     const index = channels.value.findIndex(c => c.name === channel.name);
     if (index === -1) {
       channels.value.push(channel);
@@ -231,30 +226,14 @@ export const useChatStore = defineStore("chat", () => {
     return true;
   }
 
-  // Opens the private chat with `user`, creating it the first time.
+  // Opens the direct chat with `user`; the server creates it the first time.
   // Returns the channel name to navigate to.
-  function startDirectChat(user: User): string {
-    const existing = channels.value.find(c => c.directWithId === user.id);
-    if (existing) {
-      return existing.name;
-    }
-
-    const myId = auth.userId ?? "";
-    const myNick = auth.nickname ?? "";
-    // "@" can't appear in channel names, so this never clashes with /join
-    const name = `@${user.nickname}`;
-    channels.value.push({
-      // empty id = not stored on the server
-      id: "",
-      name,
-      isPrivate: true,
-      creator: { id: myId, nickname: myNick },
-      invited: false,
-      lastMessageAt: new Date().toISOString(),
-      directWithId: user.id
+  async function startDirectChat(user: User): Promise<string> {
+    const result = await client.api.channels.direct({
+      body: { nickname: user.nickname }
     });
-    members.value[name] = [myId, user.id];
-    return name;
+    upsertChannel(result.data);
+    return result.data.name;
   }
 
   function userStats(user: User): UserStats {
@@ -271,7 +250,7 @@ export const useChatStore = defineStore("chat", () => {
       .filter(
         c =>
           !c.invited &&
-          !c.directWithId &&
+          !c.isDirect &&
           members.value[c.name]?.includes(user.id) &&
           members.value[c.name]?.includes(myId)
       )
@@ -298,18 +277,13 @@ export const useChatStore = defineStore("chat", () => {
       return false;
     }
 
-    // direct chats exist only in the browser for now
-    if (!channel.id) {
-      forgetChannel(name);
-      notifyInfo(`You left ${channelLabel(name)}`);
-      return true;
-    }
-
+    // read it before the channel is gone: "#general" or the other person's nick
+    const label = channelLabel(name);
     const { channelDeleted } = await client.api.channels.cancel({
       params: { name }
     });
     forgetChannel(name);
-    notifyInfo(channelDeleted ? `#${name} was deleted` : `You left #${name}`);
+    notifyInfo(channelDeleted ? `${label} was deleted` : `You left ${label}`);
     return true;
   }
 
@@ -320,15 +294,10 @@ export const useChatStore = defineStore("chat", () => {
       return false;
     }
 
-    if (!channel.id) {
-      forgetChannel(name);
-      notifyInfo(`Chat with ${channelTitle(channel)} was deleted`);
-      return true;
-    }
-
+    const label = channelLabel(name);
     await client.api.channels.destroy({ params: { name } });
     forgetChannel(name);
-    notifyInfo(`#${name} was deleted`);
+    notifyInfo(`${label} was deleted`);
     return true;
   }
 
@@ -361,7 +330,7 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
-  function invite(channel: ChatChannel, user: User) {
+  function invite(channel: Channel, user: User) {
     const nick = user.nickname;
     if (channel.isPrivate && !isAdmin(channel)) {
       notifyError("Only the admin can invite to a private channel");
@@ -386,7 +355,7 @@ export const useChatStore = defineStore("chat", () => {
     notifyInfo(`${nick} was invited to #${channel.name}`);
   }
 
-  function revoke(channel: ChatChannel, user: User) {
+  function revoke(channel: Channel, user: User) {
     if (!channel.isPrivate || !isAdmin(channel)) {
       notifyError("/revoke works only for the admin of a private channel");
       return;
@@ -395,7 +364,7 @@ export const useChatStore = defineStore("chat", () => {
     notifyInfo(`${user.nickname} was removed from #${channel.name}`);
   }
 
-  function kick(channel: ChatChannel, user: User) {
+  function kick(channel: Channel, user: User) {
     const myId = auth.userId;
     if (!myId) {
       return;
@@ -480,7 +449,7 @@ export const useChatStore = defineStore("chat", () => {
 
     // A direct chat always stays between the two of you
     const isMembership = ["invite", "revoke", "kick"].includes(command.name);
-    if (channel.directWithId && isMembership) {
+    if (channel.isDirect && isMembership) {
       notifyError(`/${command.name} is not available in a direct chat`);
       return {};
     }

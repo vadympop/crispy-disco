@@ -117,7 +117,7 @@ async function openChannel(name: string) {
 
 async function startChat() {
   if (user.value) {
-    await openChannel(chat.startDirectChat(user.value));
+    await openChannel(await chat.startDirectChat(user.value));
   }
 }
 </script>

@@ -42,7 +42,7 @@ if (!chat.messagesByChannel[props.channel]) {
 
 const beginning = computed(() => {
   const label = chat.channelLabel(props.channel);
-  return chat.findChannel(props.channel)?.directWithId
+  return chat.findChannel(props.channel)?.isDirect
     ? `your chat with ${label}`
     : label;
 });
