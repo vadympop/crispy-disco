@@ -52,9 +52,12 @@
 
 <script setup lang="ts">
 import { reactive, ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth-store";
 
+const route = useRoute();
 const router = useRouter();
+const store = useAuthStore();
 
 const form = reactive({
   email: "",
@@ -68,9 +71,17 @@ const isEmail = (val: string) =>
 
 async function onSubmit() {
   loading.value = true;
-  await new Promise(resolve => setTimeout(resolve, 500));
-  loading.value = false;
-  await router.push("/channels");
+  try {
+    await store.login({
+      email: form.email,
+      password: form.password
+    });
+  } finally {
+    loading.value = false;
+  }
+
+  const redirect = route.query.redirect;
+  await router.push(typeof redirect === "string" ? redirect : "/channels");
 }
 </script>
 

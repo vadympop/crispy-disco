@@ -12,7 +12,7 @@
     />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';<% if (ctx.dev) { %> connect-src 'self' ws://localhost:*; worker-src 'self' blob:;<% } %>"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' %API_URL%<% if (ctx.dev) { %> ws://localhost:*<% } %>;<% if (ctx.dev) { %> worker-src 'self' blob:;<% } %>"
     />
 
     <link rel="icon" type="image/png" href="/icons/favicon-96x96.png" sizes="96x96" />

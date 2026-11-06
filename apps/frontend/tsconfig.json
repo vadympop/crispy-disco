@@ -1,7 +1,8 @@
 {
   "extends": "./.quasar/tsconfig.json",
   "compilerOptions": {
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "exactOptionalPropertyTypes": false
   },
   "include": [
     ".quasar/*.d.ts",

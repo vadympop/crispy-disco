@@ -115,6 +115,8 @@ const $q = useQuasar();
 const route = useRoute();
 const chat = useChatStore();
 
+definePage({ meta: { requiresAuth: true } })
+
 // The chat screens use the landing palette through Quasar's dark mode
 // ($dark / $dark-page in quasar.variables.scss), so menus and dialogs match too.
 // The root background covers macOS rubber-band overscroll, as on the landing.

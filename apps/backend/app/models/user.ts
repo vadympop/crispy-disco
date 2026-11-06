@@ -11,7 +11,9 @@ import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 
 export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   static selfAssignPrimaryKey = true
-  static accessTokens = DbAccessTokensProvider.forModel(User)
+  static accessTokens = DbAccessTokensProvider.forModel(User, {
+    expiresIn: "7 days"
+  })
   declare currentAccessToken?: AccessToken
 
   @beforeCreate()
