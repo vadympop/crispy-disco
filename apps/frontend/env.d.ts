@@ -12,12 +12,12 @@
  *   readonly MY_OTHER_VAR: string;
  * }
  */
-import 'vue-router'
+import "vue-router";
 
-declare module 'vue-router' {
+declare module "vue-router" {
   interface RouteMeta {
-    requiresAuth?: boolean
-    guestOnly?: boolean
+    requiresAuth?: boolean;
+    guestOnly?: boolean;
   }
 }
 
