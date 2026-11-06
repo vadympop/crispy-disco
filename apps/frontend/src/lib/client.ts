@@ -3,7 +3,6 @@ import { registry } from "@cisco-disco/backend/registry";
 
 export const client = createTuyau({
   baseUrl: import.meta.env.API_URL || "http://localhost:3333",
-  // @ts-expect-error
   registry,
   headers: { Accept: "application/json" },
   hooks: {
