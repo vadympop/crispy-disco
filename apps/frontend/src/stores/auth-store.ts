@@ -7,7 +7,21 @@ import { LOCALSTORAGE_KEYS } from '@/lib/storage-keys'
 
 export const useAuthStore = defineStore('auth', () => {
   const me = ref<User | null>(null)
-  const isLoggedIn = computed(() => me.value !== null)
+  const isLoggedIn = computed(
+    () => localStorage.getItem(LOCALSTORAGE_KEYS.authToken) !== null
+  )
+
+  async function fetchMe() {
+    if (!localStorage.getItem(LOCALSTORAGE_KEYS.authToken)) return
+    try {
+      const result = await client.api.profile.profile.show({})
+      me.value = result.data
+    } catch {
+      // token expired or revoked
+      localStorage.removeItem(LOCALSTORAGE_KEYS.authToken)
+      me.value = null
+    }
+  }
 
   async function login(data: LoginRequest) {
     const result = await client.api.auth.accessTokens.store({
@@ -34,6 +48,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     isLoggedIn,
     me,
+    fetchMe,
     login,
     signup,
     logout
