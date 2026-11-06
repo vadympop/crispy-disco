@@ -14,6 +14,15 @@ export const client = createTuyau({
           request.headers.set("Authorization", `Bearer ${token}`);
         }
       }
+    ],
+    beforeError: [
+      error => {
+        if (error.response?.status === 401) {
+          localStorage.removeItem(LOCALSTORAGE_KEYS.authToken)
+        }
+
+        return error
+      }
     ]
   }
 });
