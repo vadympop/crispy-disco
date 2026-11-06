@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="open">
+  <q-dialog v-model="open" @before-show="loadMembers">
     <q-card flat class="dialog-card q-pb-sm">
       <q-card-section class="row items-center">
         <div class="text-h6 col ellipsis"
@@ -8,10 +8,14 @@
         <q-btn v-close-popup flat round dense icon="close" aria-label="Close" />
       </q-card-section>
 
-      <q-list class="scroll" style="max-height: 60vh">
-        <q-item v-for="member in members" :key="member.nickname" clickable>
+      <div v-if="isLoading" class="row justify-center q-pa-md">
+        <q-spinner size="28px" />
+      </div>
+      <q-list v-else class="scroll" style="max-height: 60vh">
+        <q-item v-for="member in members" :key="member.id" clickable>
           <UserProfileMenu
             :nick-name="member.nickname"
+            :user-id="member.id"
             @navigated="open = false"
           />
           <q-item-section avatar>
@@ -49,7 +53,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import type { PublicProfile } from "@/types/api";
 import { useChatStore } from "@/stores/chat-store";
 import { statusOption } from "@/lib/status";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
@@ -60,7 +65,18 @@ const open = defineModel<boolean>({ required: true });
 
 const chat = useChatStore();
 
-const members = computed(() => chat.membersOf(props.channel));
+const members = ref<PublicProfile[]>([]);
+const isLoading = ref(false);
+
+// loaded on every open, members join and leave all the time
+async function loadMembers() {
+  isLoading.value = true;
+  try {
+    members.value = await chat.fetchMembers(props.channel);
+  } finally {
+    isLoading.value = false;
+  }
+}
 const creatorId = computed(() => chat.findChannel(props.channel)?.creator.id);
 </script>
 

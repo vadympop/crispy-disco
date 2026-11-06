@@ -2,7 +2,7 @@ import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
 import type { Message, TypingDraft, UserStats } from "@/types/chat";
-import type { Channel, User } from "@/types/api";
+import type { Channel, PublicProfile, User } from "@/types/api";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
@@ -105,10 +105,6 @@ export const useChatStore = defineStore("chat", () => {
     return users.value.find(user => user.nickname === nickName);
   }
 
-  function findUserById(id: string) {
-    return users.value.find(user => user.id === id);
-  }
-
   // The other person in a direct chat; undefined for normal channels.
   // The server sends the members only for direct chats.
   function directPartner(channel: Channel) {
@@ -147,10 +143,12 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
-  function membersOf(channelName: string): User[] {
-    return (members.value[channelName] ?? [])
-      .map(id => findUserById(id))
-      .filter((user): user is User => user !== undefined);
+  // The members of a channel, always fresh from the server (/list)
+  async function fetchMembers(channelName: string): Promise<PublicProfile[]> {
+    const result = await client.api.channels.members({
+      params: { name: channelName }
+    });
+    return result.data;
   }
 
   // Loads the next page of older messages. Returns false when there are no more.
@@ -226,17 +224,17 @@ export const useChatStore = defineStore("chat", () => {
     return true;
   }
 
-  // Opens the direct chat with `user`; the server creates it the first time.
+  // Opens the direct chat with that user; the server creates it the first time.
   // Returns the channel name to navigate to.
-  async function startDirectChat(user: User): Promise<string> {
+  async function startDirectChat(userId: string): Promise<string> {
     const result = await client.api.channels.direct({
-      body: { userId: user.id }
+      body: { userId }
     });
     upsertChannel(result.data);
     return result.data.name;
   }
 
-  function userStats(user: User): UserStats {
+  function userStats(user: Pick<User, "id" | "nickname">): UserStats {
     // TODO: mock messages only know the author's nick
     let messageCount = 0;
     for (const history of Object.values(serverHistory)) {
@@ -532,12 +530,11 @@ export const useChatStore = defineStore("chat", () => {
     sortedChannels,
     findChannel,
     findUser,
-    findUserById,
     directPartner,
     channelTitle,
     channelLabel,
     isAdmin,
-    membersOf,
+    fetchMembers,
     loadOlder,
     sendMessage,
     joinChannel,

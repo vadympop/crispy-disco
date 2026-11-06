@@ -20,6 +20,7 @@
           >
             <UserProfileMenu
               :nick-name="chat.directPartner(channel)?.nickname ?? ''"
+              :user-id="chat.directPartner(channel)?.id"
             />
           </UserAvatar>
           <q-icon
