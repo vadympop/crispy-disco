@@ -125,6 +125,7 @@ const CHAT_BG = "#252a5c";
 onMounted(() => {
   $q.dark.set(true);
   document.documentElement.style.backgroundColor = CHAT_BG;
+  void chat.fetchChannels();
 });
 
 onBeforeUnmount(() => {

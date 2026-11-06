@@ -10,6 +10,8 @@ import type {
   UserStats,
   UserStatus
 } from "@/types/chat";
+import type { ApiChannel } from "@/types/api";
+import { client } from "@/lib/client";
 import { parseCommand } from "@/lib/commands";
 import {
   generateHistory,
@@ -44,10 +46,24 @@ function notifyInfo(message: string) {
   Notify.create({ type: "info", message });
 }
 
+// The API shape -> the shape the chat UI works with
+function toChannel(channel: ApiChannel): Channel {
+  return {
+    id: channel.id,
+    name: channel.name,
+    isPrivate: channel.isPrivate,
+    adminNick: channel.adminNick,
+    invited: channel.invited,
+    lastMessageAt: channel.lastMessageAt ?? ""
+  };
+}
+
 export const useChatStore = defineStore("chat", () => {
   const me = ref<User>({ ...mockMe });
   const users = ref<User[]>(mockUsers.map(user => ({ ...user })));
-  const channels = ref<Channel[]>(mockChannels.map(c => ({ ...c })));
+  // Filled from the API by fetchChannels()
+  const channels = ref<Channel[]>([]);
+  const isLoadingChannels = ref(false);
   const otherChannels = ref<Channel[]>(mockOtherChannels.map(c => ({ ...c })));
   const members = ref<Record<string, string[]>>(structuredClone(mockMembers));
   const bans = ref<Record<string, string[]>>({});
@@ -69,6 +85,19 @@ export const useChatStore = defineStore("chat", () => {
       return b.lastMessageAt.localeCompare(a.lastMessageAt);
     })
   );
+
+  // Loads the channels the logged-in user is a member of or invited to
+  async function fetchChannels() {
+    isLoadingChannels.value = true;
+    try {
+      const result = await client.api.channels.index({});
+      channels.value = result.data.map(toChannel);
+    } catch {
+      notifyError("Could not load your channels");
+    } finally {
+      isLoadingChannels.value = false;
+    }
+  }
 
   function findChannel(name: string) {
     return channels.value.find(channel => channel.name === name);
@@ -531,6 +560,8 @@ export const useChatStore = defineStore("chat", () => {
     me,
     users,
     channels,
+    isLoadingChannels,
+    fetchChannels,
     members,
     notifyMentionsOnly,
     typing,

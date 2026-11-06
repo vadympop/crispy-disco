@@ -33,5 +33,12 @@ router
       .prefix('account')
       .as('profile')
       .use(middleware.auth())
+    router
+      .group(()=> {
+        router.get('/', [controllers.Channels, 'index'])
+      })
+      .prefix('channels')
+      .use(middleware.auth())
+      
   })
   .prefix('/api/v1')

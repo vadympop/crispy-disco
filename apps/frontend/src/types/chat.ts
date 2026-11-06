@@ -17,6 +17,8 @@ export type ProfileUpdate = Pick<
 >;
 
 export interface Channel {
+  // database id; missing for mock channels and local direct chats
+  id?: string;
   name: string;
   isPrivate: boolean;
   adminNick: string;
