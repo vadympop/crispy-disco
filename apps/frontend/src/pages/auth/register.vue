@@ -85,8 +85,10 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from '@/stores/auth-store'
 
 const router = useRouter();
+const store = useAuthStore()
 
 const form = reactive({
   firstName: "",
@@ -111,7 +113,14 @@ const matchesPassword = (val: string) =>
 
 async function onSubmit() {
   loading.value = true;
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await store.signup({
+    firstName: form.firstName,
+    lastName: form.lastName,
+    nickname: form.nickName,
+    email: form.email,
+    password: form.password,
+    passwordConfirmation: form.passwordConfirm,
+  });
   loading.value = false;
   await router.push("/channels");
 }

@@ -53,8 +53,10 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from '@/stores/auth-store'
 
 const router = useRouter();
+const store = useAuthStore()
 
 const form = reactive({
   email: "",
@@ -68,7 +70,10 @@ const isEmail = (val: string) =>
 
 async function onSubmit() {
   loading.value = true;
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await store.login({
+    email: form.email,
+    password: form.password
+  });
   loading.value = false;
   await router.push("/channels");
 }
