@@ -9,19 +9,19 @@
       </q-card-section>
 
       <q-list class="scroll" style="max-height: 60vh">
-        <q-item v-for="member in members" :key="member.nickName" clickable>
+        <q-item v-for="member in members" :key="member.nickname" clickable>
           <UserProfileMenu
-            :nick-name="member.nickName"
+            :nick-name="member.nickname"
             @navigated="open = false"
           />
           <q-item-section avatar>
-            <UserAvatar :nick-name="member.nickName" />
+            <UserAvatar :nick-name="member.nickname" />
           </q-item-section>
           <q-item-section>
             <q-item-label>
-              {{ member.nickName }}
+              {{ member.nickname }}
               <q-badge
-                v-if="member.nickName === adminNick"
+                v-if="member.id === creatorId"
                 text-color="dark"
                 class="admin-badge q-ml-xs"
                 label="admin"
@@ -61,7 +61,7 @@ const open = defineModel<boolean>({ required: true });
 const chat = useChatStore();
 
 const members = computed(() => chat.membersOf(props.channel));
-const adminNick = computed(() => chat.findChannel(props.channel)?.adminNick);
+const creatorId = computed(() => chat.findChannel(props.channel)?.creator.id);
 </script>
 
 <style scoped>

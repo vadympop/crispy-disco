@@ -2,7 +2,7 @@
   <q-page padding class="welcome-page">
     <div class="welcome-content">
       <div class="welcome-title text-weight-bold q-mb-xs"
-        >Welcome, {{ chat.me.firstName }}! 👋</div
+        >Welcome, {{ auth.me?.firstName }}! 👋</div
       >
       <div class="welcome-subtitle text-body1 q-mb-lg">
         Pick a channel on the left, or type
@@ -22,7 +22,9 @@
           <q-item v-for="channel in invites" :key="channel.name">
             <q-item-section>
               <q-item-label>#{{ channel.name }}</q-item-label>
-              <q-item-label caption>from {{ channel.adminNick }}</q-item-label>
+              <q-item-label caption>
+                from {{ channel.creator.nickname }}
+              </q-item-label>
             </q-item-section>
             <q-item-section side>
               <div class="row q-gutter-sm">
@@ -78,8 +80,10 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { COMMANDS } from "@/lib/commands";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 const chat = useChatStore();
+const auth = useAuthStore();
 const router = useRouter();
 
 const invites = computed(() => chat.sortedChannels.filter(c => c.invited));

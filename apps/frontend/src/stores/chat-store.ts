@@ -1,22 +1,14 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
-import type {
-  Channel,
-  Message,
-  ProfileUpdate,
-  TypingDraft,
-  User,
-  UserStats,
-  UserStatus
-} from "@/types/chat";
+import type { Message, TypingDraft, UserStats } from "@/types/chat";
+import type { Channel, User } from "@/types/api";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
 import {
   generateHistory,
   mockChannels,
-  mockMe,
   mockMembers,
   mockOtherChannels,
   mockUsers
@@ -24,6 +16,10 @@ import {
 
 const PAGE_SIZE = 20;
 const KICKS_TO_BAN = 3;
+
+// Direct chats exist only in the browser for now, so the API channel
+// doesn't know about them. directWithId is the id of the other person.
+export type ChatChannel = Channel & { directWithId?: string };
 
 // What the UI should do after a command ran
 export interface CommandResult {
@@ -38,6 +34,18 @@ for (const channel of [...mockChannels, ...mockOtherChannels]) {
   serverHistory[channel.name] = generateHistory(channel.name, 120);
 }
 
+// TODO: temporary, the mocks list members by nick
+function mockMembersToIds(): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const [channel, nicks] of Object.entries(mockMembers)) {
+    result[channel] = nicks
+      .map(nick => mockUsers.find(user => user.nickName === nick))
+      .filter(user => user !== undefined)
+      .map(user => String(user.id));
+  }
+  return result;
+}
+
 function notifyError(message: string) {
   Notify.create({ type: "negative", message });
 }
@@ -46,19 +54,23 @@ function notifyInfo(message: string) {
   Notify.create({ type: "info", message });
 }
 
-// API errors are not caught here: they reach the global handler in
-// boot/api-errors.ts, which shows the server's message and handles 401
-
 export const useChatStore = defineStore("chat", () => {
   const auth = useAuthStore();
-  const me = ref<User>({ ...mockMe });
-  const users = ref<User[]>(mockUsers.map(user => ({ ...user })));
+  // TODO: temporary, the mocks still use the old User shape until /users exists
+  const users = ref<User[]>(
+    mockUsers.map(user => ({
+      ...user,
+      id: String(user.id),
+      nickname: user.nickName
+    })) as unknown as User[]
+  );
   // Filled from the API by fetchChannels()
-  const channels = ref<Channel[]>([]);
+  const channels = ref<ChatChannel[]>([]);
   const isLoadingChannels = ref(false);
-  const members = ref<Record<string, string[]>>(structuredClone(mockMembers));
+  // All three are keyed by channel name and hold user ids
+  const members = ref<Record<string, string[]>>(mockMembersToIds());
   const bans = ref<Record<string, string[]>>({});
-  // channel -> kicked nick -> nicks of members who voted for the kick
+  // channel -> kicked user id -> ids of members who voted for the kick
   const kickVotes = ref<Record<string, Record<string, string[]>>>({});
   const notifyMentionsOnly = ref(false);
   const typing = ref<TypingDraft[]>([]);
@@ -92,17 +104,29 @@ export const useChatStore = defineStore("chat", () => {
     return channels.value.find(channel => channel.name === name);
   }
 
+  // Nicks are what people type (commands, @mentions), ids are what we store
   function findUser(nickName: string) {
-    return users.value.find(user => user.nickName === nickName);
+    return users.value.find(user => user.nickname === nickName);
+  }
+
+  function findUserById(id: string) {
+    return users.value.find(user => user.id === id);
+  }
+
+  // The other person in a direct chat; undefined for normal channels
+  function directPartner(channel: ChatChannel) {
+    return channel.directWithId
+      ? findUserById(channel.directWithId)
+      : undefined;
   }
 
   // Direct chats are titled with the other person's name, channels with theirs
-  function channelTitle(channel: Channel): string {
-    if (!channel.directWith) {
+  function channelTitle(channel: ChatChannel): string {
+    if (!channel.directWithId) {
       return channel.name;
     }
-    const user = findUser(channel.directWith);
-    return user ? `${user.firstName} ${user.lastName}` : channel.directWith;
+    const user = directPartner(channel);
+    return user ? `${user.firstName} ${user.lastName}` : channel.name;
   }
 
   // How a channel is referred to in sentences: "#general" or "Ed Horvath"
@@ -111,20 +135,15 @@ export const useChatStore = defineStore("chat", () => {
     if (!channel) {
       return `#${name}`;
     }
-    return channel.directWith ? channelTitle(channel) : `#${channel.name}`;
+    return channel.directWithId ? channelTitle(channel) : `#${channel.name}`;
   }
 
-  // The logged-in user's nick; undefined until the profile is loaded
-  function myNick() {
-    return auth.me?.nickname;
-  }
-
-  function isAdmin(channel: Channel) {
-    return channel.adminNick === myNick();
+  function isAdmin(channel: ChatChannel) {
+    return channel.creator.id === auth.userId;
   }
 
   // Adds the channel, or replaces the one with the same name
-  function upsertChannel(channel: Channel) {
+  function upsertChannel(channel: ChatChannel) {
     const index = channels.value.findIndex(c => c.name === channel.name);
     if (index === -1) {
       channels.value.push(channel);
@@ -135,7 +154,7 @@ export const useChatStore = defineStore("chat", () => {
 
   function membersOf(channelName: string): User[] {
     return (members.value[channelName] ?? [])
-      .map(nick => (nick === me.value.nickName ? me.value : findUser(nick)))
+      .map(id => findUserById(id))
       .filter((user): user is User => user !== undefined);
   }
 
@@ -154,6 +173,10 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   function sendMessage(channelName: string, text: string) {
+    const myNick = auth.nickname;
+    if (!myNick) {
+      return;
+    }
     const channel = findChannel(channelName);
     if (!channel || channel.invited) {
       notifyError("You can only post in channels you are a member of");
@@ -163,7 +186,8 @@ export const useChatStore = defineStore("chat", () => {
     const message: Message = {
       id: Date.now(),
       channel: channelName,
-      authorNick: me.value.nickName,
+      // TODO: mock messages only know the author's nick
+      authorNick: myNick,
       text,
       createdAt: new Date().toISOString()
     };
@@ -176,64 +200,80 @@ export const useChatStore = defineStore("chat", () => {
 
   // /join: joins a public channel, accepts an invite, or creates the channel.
   // The server decides (private channels and bans are refused there).
-  async function joinChannel(name: string, isPrivate: boolean): Promise<boolean> {
+  async function joinChannel(
+    name: string,
+    isPrivate: boolean
+  ): Promise<boolean> {
     const mine = findChannel(name);
     if (mine && !mine.invited) {
       return true;
     }
 
-    const result = await client.api.channels.join({ body: { name, isPrivate } });
+    const result = await client.api.channels.join({
+      body: { name, isPrivate }
+    });
     const { channel, created } = result.data;
     upsertChannel(channel);
 
+    const myId = auth.userId;
     const current = members.value[name] ?? [];
-    if (!current.includes(me.value.nickName)) {
-      members.value[name] = [...current, me.value.nickName];
+    if (myId && !current.includes(myId)) {
+      members.value[name] = [...current, myId];
     }
 
     if (created) {
-      notifyInfo(`Created ${channel.isPrivate ? "private" : "public"} channel #${name}`);
+      notifyInfo(
+        `Created ${channel.isPrivate ? "private" : "public"} channel #${name}`
+      );
     } else {
       notifyInfo(`Joined #${name}`);
     }
     return true;
   }
 
-  // Opens the private chat with `nick`, creating it the first time.
+  // Opens the private chat with `user`, creating it the first time.
   // Returns the channel name to navigate to.
-  function startDirectChat(nick: string): string {
-    const existing = channels.value.find(c => c.directWith === nick);
+  function startDirectChat(user: User): string {
+    const existing = channels.value.find(c => c.directWithId === user.id);
     if (existing) {
       return existing.name;
     }
 
+    const myId = auth.userId ?? "";
+    const myNick = auth.nickname ?? "";
     // "@" can't appear in channel names, so this never clashes with /join
-    const name = `@${nick}`;
+    const name = `@${user.nickname}`;
     channels.value.push({
+      // empty id = not stored on the server
+      id: "",
       name,
       isPrivate: true,
-      adminNick: me.value.nickName,
+      creator: { id: myId, nickname: myNick },
       invited: false,
       lastMessageAt: new Date().toISOString(),
-      directWith: nick
+      directWithId: user.id
     });
-    members.value[name] = [me.value.nickName, nick];
+    members.value[name] = [myId, user.id];
     return name;
   }
 
-  function userStats(nick: string): UserStats {
+  function userStats(user: User): UserStats {
+    // TODO: mock messages only know the author's nick
     let messageCount = 0;
     for (const history of Object.values(serverHistory)) {
-      messageCount += history.filter(m => m.authorNick === nick).length;
+      messageCount += history.filter(
+        m => m.authorNick === user.nickname
+      ).length;
     }
 
+    const myId = auth.userId ?? "";
     const sharedChannels = channels.value
       .filter(
         c =>
           !c.invited &&
-          !c.directWith &&
-          members.value[c.name]?.includes(nick) &&
-          members.value[c.name]?.includes(me.value.nickName)
+          !c.directWithId &&
+          members.value[c.name]?.includes(user.id) &&
+          members.value[c.name]?.includes(myId)
       )
       .map(c => c.name);
 
@@ -265,7 +305,9 @@ export const useChatStore = defineStore("chat", () => {
       return true;
     }
 
-    const { channelDeleted } = await client.api.channels.cancel({ params: { name } });
+    const { channelDeleted } = await client.api.channels.cancel({
+      params: { name }
+    });
     forgetChannel(name);
     notifyInfo(channelDeleted ? `#${name} was deleted` : `You left #${name}`);
     return true;
@@ -300,46 +342,13 @@ export const useChatStore = defineStore("chat", () => {
     removeChannel(name);
   }
 
-  function setStatus(status: UserStatus) {
-    me.value.status = status;
-  }
-
-  // Returns false (and notifies) when the new nickname is already taken
-  function updateProfile(profile: ProfileUpdate): boolean {
-    const oldNick = me.value.nickName;
-    const newNick = profile.nickName;
-
-    if (newNick !== oldNick) {
-      // users also holds a copy of me, which doesn't count as taken
-      const taken = users.value.some(
-        user => user.nickName === newNick && user.id !== me.value.id
-      );
-      if (taken) {
-        notifyError(`Nickname ${newNick} is already taken`);
-        return false;
-      }
-      renameNick(oldNick, newNick);
-    }
-
-    me.value.nickName = newNick;
-    me.value.firstName = profile.firstName;
-    me.value.lastName = profile.lastName;
-    if (profile.avatarUrl) {
-      me.value.avatarUrl = profile.avatarUrl;
-    } else {
-      delete me.value.avatarUrl;
-    }
-    notifyInfo("Profile updated");
-    return true;
-  }
-
-  // Everything that references users by nick has to follow the rename.
-  // Old "@nick" mentions inside message texts are left as they were written.
+  // Everything else uses ids, so only the places that still store
+  // a nick follow the rename. Old "@nick" mentions in texts stay as written.
   function renameNick(oldNick: string, newNick: string) {
     const rename = (nick: string) => (nick === oldNick ? newNick : nick);
 
     for (const user of users.value) {
-      user.nickName = rename(user.nickName);
+      user.nickname = rename(user.nickname);
     }
 
     for (const list of [
@@ -350,108 +359,96 @@ export const useChatStore = defineStore("chat", () => {
         message.authorNick = rename(message.authorNick);
       }
     }
-    for (const channel of channels.value) {
-      channel.adminNick = rename(channel.adminNick);
-    }
-    for (const lists of [members.value, bans.value]) {
-      for (const name of Object.keys(lists)) {
-        lists[name] = lists[name]!.map(rename);
-      }
-    }
-    for (const votes of Object.values(kickVotes.value)) {
-      for (const [nick, voters] of Object.entries(votes)) {
-        delete votes[nick];
-        votes[rename(nick)] = voters.map(rename);
-      }
-    }
   }
 
-  function invite(channel: Channel, nick: string) {
-    if (!findUser(nick)) {
-      notifyError(`User ${nick} does not exist`);
-      return;
-    }
+  function invite(channel: ChatChannel, user: User) {
+    const nick = user.nickname;
     if (channel.isPrivate && !isAdmin(channel)) {
       notifyError("Only the admin can invite to a private channel");
       return;
     }
 
     const banned = bans.value[channel.name] ?? [];
-    if (banned.includes(nick)) {
+    if (banned.includes(user.id)) {
       if (!isAdmin(channel)) {
         notifyError(`${nick} is banned, only the admin can let them back`);
         return;
       }
-      bans.value[channel.name] = banned.filter(n => n !== nick);
+      bans.value[channel.name] = banned.filter(id => id !== user.id);
     }
 
     const current = members.value[channel.name] ?? [];
-    if (current.includes(nick)) {
+    if (current.includes(user.id)) {
       notifyInfo(`${nick} is already a member`);
       return;
     }
-    members.value[channel.name] = [...current, nick];
+    members.value[channel.name] = [...current, user.id];
     notifyInfo(`${nick} was invited to #${channel.name}`);
   }
 
-  function revoke(channel: Channel, nick: string) {
+  function revoke(channel: ChatChannel, user: User) {
     if (!channel.isPrivate || !isAdmin(channel)) {
       notifyError("/revoke works only for the admin of a private channel");
       return;
     }
-    removeMember(channel.name, nick);
-    notifyInfo(`${nick} was removed from #${channel.name}`);
+    removeMember(channel.name, user.id);
+    notifyInfo(`${user.nickname} was removed from #${channel.name}`);
   }
 
-  function kick(channel: Channel, nick: string) {
+  function kick(channel: ChatChannel, user: User) {
+    const myId = auth.userId;
+    if (!myId) {
+      return;
+    }
+    const nick = user.nickname;
     if (channel.isPrivate) {
       notifyError("/kick works only in public channels, use /revoke");
       return;
     }
-    if (nick === me.value.nickName || nick === channel.adminNick) {
+    if (user.id === myId || user.id === channel.creator.id) {
       notifyError(`You can't kick ${nick}`);
       return;
     }
-    if (!members.value[channel.name]?.includes(nick)) {
+    if (!members.value[channel.name]?.includes(user.id)) {
       notifyError(`${nick} is not a member of #${channel.name}`);
       return;
     }
 
     // Admin kick = permanent ban right away
     if (isAdmin(channel)) {
-      ban(channel.name, nick);
+      ban(channel.name, user);
       return;
     }
 
     const votes = (kickVotes.value[channel.name] ??= {});
-    const voters = (votes[nick] ??= []);
-    if (!voters.includes(me.value.nickName)) {
-      voters.push(me.value.nickName);
+    const voters = (votes[user.id] ??= []);
+    if (!voters.includes(myId)) {
+      voters.push(myId);
     }
     // Pretend another member already voted too, so the ban can be demoed
     const otherVoter = members.value[channel.name]?.find(
-      n => n !== nick && !voters.includes(n)
+      id => id !== user.id && !voters.includes(id)
     );
     if (voters.length < KICKS_TO_BAN - 1 && otherVoter) {
       voters.push(otherVoter);
     }
 
     if (voters.length >= KICKS_TO_BAN) {
-      ban(channel.name, nick);
+      ban(channel.name, user);
     } else {
       notifyInfo(`Kick vote for ${nick}: ${voters.length}/${KICKS_TO_BAN}`);
     }
   }
 
-  function ban(channelName: string, nick: string) {
-    removeMember(channelName, nick);
-    bans.value[channelName] = [...(bans.value[channelName] ?? []), nick];
-    notifyInfo(`${nick} is permanently banned from #${channelName}`);
+  function ban(channelName: string, user: User) {
+    removeMember(channelName, user.id);
+    bans.value[channelName] = [...(bans.value[channelName] ?? []), user.id];
+    notifyInfo(`${user.nickname} is permanently banned from #${channelName}`);
   }
 
-  function removeMember(channelName: string, nick: string) {
+  function removeMember(channelName: string, userId: string) {
     members.value[channelName] = (members.value[channelName] ?? []).filter(
-      n => n !== nick
+      id => id !== userId
     );
   }
 
@@ -483,7 +480,7 @@ export const useChatStore = defineStore("chat", () => {
 
     // A direct chat always stays between the two of you
     const isMembership = ["invite", "revoke", "kick"].includes(command.name);
-    if (channel.directWith && isMembership) {
+    if (channel.directWithId && isMembership) {
       notifyError(`/${command.name} is not available in a direct chat`);
       return {};
     }
@@ -491,23 +488,34 @@ export const useChatStore = defineStore("chat", () => {
     switch (command.name) {
       case "invite":
       case "revoke":
-      case "kick":
+      case "kick": {
         if (!firstArg) {
           notifyError(`Usage: /${command.name} nickName`);
+          return {};
+        }
+        // the command names a nick, from here on we work with the user
+        const user = findUser(firstArg);
+        if (!user) {
+          notifyError(`User ${firstArg} does not exist`);
         } else if (command.name === "invite") {
-          invite(channel, firstArg);
+          invite(channel, user);
         } else if (command.name === "revoke") {
-          revoke(channel, firstArg);
+          revoke(channel, user);
         } else {
-          kick(channel, firstArg);
+          kick(channel, user);
         }
         return {};
+      }
       case "list":
         return { showMembers: true };
       case "cancel":
-        return (await leaveChannel(channel.name)) ? { navigateTo: "/channels" } : {};
+        return (await leaveChannel(channel.name))
+          ? { navigateTo: "/channels" }
+          : {};
       case "quit":
-        return (await deleteChannel(channel.name)) ? { navigateTo: "/channels" } : {};
+        return (await deleteChannel(channel.name))
+          ? { navigateTo: "/channels" }
+          : {};
       default:
         notifyError(`Unknown command /${command.name}`);
         return {};
@@ -544,7 +552,6 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   return {
-    me,
     users,
     channels,
     isLoadingChannels,
@@ -556,6 +563,8 @@ export const useChatStore = defineStore("chat", () => {
     sortedChannels,
     findChannel,
     findUser,
+    findUserById,
+    directPartner,
     channelTitle,
     channelLabel,
     isAdmin,
@@ -569,8 +578,7 @@ export const useChatStore = defineStore("chat", () => {
     startDirectChat,
     userStats,
     declineInvite,
-    setStatus,
-    updateProfile,
+    renameNick,
     runCommand,
     simulateTyping
   };

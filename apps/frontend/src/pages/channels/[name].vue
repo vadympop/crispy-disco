@@ -1,7 +1,7 @@
 <template>
   <!-- Exact height (not min-height) so MessageList can scroll inside the page -->
   <q-page :style-fn="fitHeight" class="column no-wrap">
-    <q-banner v-if="chat.me.status === 'offline'" dense class="offline-banner">
+    <q-banner v-if="auth.me?.status === 'offline'" dense class="offline-banner">
       <template #avatar><q-icon name="cloud_off" /></template>
       You are offline. New messages are not delivered until you go back online.
     </q-banner>
@@ -35,10 +35,12 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 import MessageList from "@/components/chat/MessageList.vue";
 
 const route = useRoute("/channels/[name]");
 const chat = useChatStore();
+const auth = useAuthStore();
 
 const name = computed(() => route.params.name);
 const channel = computed(() => chat.findChannel(name.value));

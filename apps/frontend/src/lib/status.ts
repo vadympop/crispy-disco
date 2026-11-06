@@ -28,7 +28,7 @@ export const STATUS_OPTIONS: StatusOption[] = [
   }
 ];
 
-export function statusOption(status: UserStatus): StatusOption {
+export function statusOption(status: string): StatusOption {
   return (
     STATUS_OPTIONS.find(option => option.value === status) ?? STATUS_OPTIONS[0]!
   );

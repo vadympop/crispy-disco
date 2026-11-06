@@ -12,39 +12,9 @@
 
           <div class="row items-center no-wrap q-mb-md">
             <UserAvatar
-              :nick-name="form.nickName || chat.me.nickName"
-              :src="form.avatarUrl"
+              :nick-name="form.nickName || auth.nickname || ''"
+              is-own
               size="72px"
-              class="q-mr-md"
-            />
-            <div class="column q-gutter-xs">
-              <q-btn
-                rounded
-                outline
-                dense
-                no-caps
-                color="white"
-                icon="photo_camera"
-                label="Change picture"
-                class="q-px-md"
-                @click="fileInput?.click()"
-              />
-              <q-btn
-                v-if="form.avatarUrl"
-                flat
-                dense
-                no-caps
-                label="Remove picture"
-                class="muted"
-                @click="form.avatarUrl = ''"
-              />
-            </div>
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*"
-              hidden
-              @change="onFileChange"
             />
           </div>
 
@@ -109,7 +79,7 @@
                 <q-item-label>Notify only for mentions</q-item-label>
                 <q-item-label caption
                   >Ignore messages without @{{
-                    form.nickName || chat.me.nickName
+                    form.nickName || auth.nickname
                   }}</q-item-label
                 >
               </q-item-section>
@@ -147,38 +117,33 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, useTemplateRef } from "vue";
+import { reactive } from "vue";
 import { Notify } from "quasar";
 import type { UserStatus } from "@/types/chat";
 import { STATUS_OPTIONS } from "@/lib/status";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 
 const open = defineModel<boolean>({ required: true });
 
 const chat = useChatStore();
-const fileInput = useTemplateRef<HTMLInputElement>("fileInput");
-
-// Pictures are scaled down before they are kept, so the store stays small
-const AVATAR_SIZE = 160;
+const auth = useAuthStore();
 
 // Nothing is applied until Save; Cancel or closing throws the draft away
-// avatarUrl "" means "no picture"
 const form = reactive({
   nickName: "",
   firstName: "",
   lastName: "",
-  avatarUrl: "",
   status: "online" as UserStatus,
   notifyMentionsOnly: false
 });
 
 function reset() {
-  form.nickName = chat.me.nickName;
-  form.firstName = chat.me.firstName;
-  form.lastName = chat.me.lastName;
-  form.avatarUrl = chat.me.avatarUrl ?? "";
-  form.status = chat.me.status;
+  form.nickName = auth.nickname ?? "";
+  form.firstName = auth.me?.firstName ?? "";
+  form.lastName = auth.me?.lastName ?? "";
+  form.status = (auth.me?.status ?? "online") as UserStatus;
   form.notifyMentionsOnly = chat.notifyMentionsOnly;
 }
 
@@ -188,65 +153,29 @@ const isNickName = (val: string) =>
   /^[a-zA-Z0-9_.-]{3,30}$/.test(val) ||
   "3-30 characters: letters, numbers, _ . -";
 
-async function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-
-  // Reset the input to allow the same file to be picked again
-  input.value = "";
-  if (!file) {
-    return;
-  }
-
-  if (!file.type.startsWith("image/")) {
-    Notify.create({ type: "negative", message: "Pick an image file" });
-    return;
-  }
-
-  try {
-    form.avatarUrl = await toSquareAvatar(file);
-  } catch {
-    Notify.create({ type: "negative", message: "Could not read that image" });
-  }
-}
-
-// Center-crops the picture to a square and scales it to AVATAR_SIZE
-async function toSquareAvatar(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = AVATAR_SIZE;
-  canvas.height = AVATAR_SIZE;
-  canvas
-    .getContext("2d")!
-    .drawImage(
-      bitmap,
-      (bitmap.width - side) / 2,
-      (bitmap.height - side) / 2,
-      side,
-      side,
-      0,
-      0,
-      AVATAR_SIZE,
-      AVATAR_SIZE
-    );
-  bitmap.close();
-
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
-
 function onSubmit() {
-  const saved = chat.updateProfile({
-    nickName: form.nickName,
-    firstName: form.firstName.trim(),
-    lastName: form.lastName.trim(),
-    avatarUrl: form.avatarUrl
-  });
-  if (!saved) {
-    return;
+  const oldNick = auth.nickname;
+  const newNick = form.nickName;
+  if (oldNick && newNick !== oldNick) {
+    // the user list still holds a mock copy of me, which doesn't count as taken
+    const owner = chat.findUser(newNick);
+    if (owner && owner.id !== auth.userId) {
+      Notify.create({
+        type: "negative",
+        message: `Nickname ${newNick} is already taken`
+      });
+      return;
+    }
+    chat.renameNick(oldNick, newNick);
   }
-  chat.setStatus(form.status);
+
+  auth.updateProfile({
+    nickname: newNick,
+    firstName: form.firstName.trim(),
+    lastName: form.lastName.trim()
+  });
+  auth.setStatus(form.status);
+  Notify.create({ type: "info", message: "Profile updated" });
   chat.notifyMentionsOnly = form.notifyMentionsOnly;
   open.value = false;
 }

@@ -1,39 +1,27 @@
 <template>
   <q-avatar :size="size" text-color="white" :class="avatarClass">
-    <img v-if="avatarUrl" :src="avatarUrl" :alt="nickName" />
-    <template v-else>{{ nickName.charAt(0).toUpperCase() }}</template>
+    {{ nickName.charAt(0).toUpperCase() }}
     <slot />
   </q-avatar>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 
 const props = withDefaults(
   defineProps<{
     nickName: string;
     size?: string;
-    // a picture that isn't saved yet (preview in the settings dialog)
-    src?: string | null;
+    // the settings dialog shows my avatar while the nickname is being edited
+    isOwn?: boolean;
   }>(),
-  { size: "36px", src: null }
+  { size: "36px", isOwn: false }
 );
 
-const chat = useChatStore();
+const auth = useAuthStore();
 
-// a preview is always of me, even while the nickname is being edited
-const isMe = computed(
-  () => props.src !== null || props.nickName === chat.me.nickName
-);
-
-const avatarUrl = computed(() => {
-  if (props.src !== null) {
-    return props.src;
-  }
-  const user = isMe.value ? chat.me : chat.findUser(props.nickName);
-  return user?.avatarUrl;
-});
+const isMe = computed(() => props.isOwn || props.nickName === auth.nickname);
 
 const avatarClass = computed(() =>
   isMe.value ? "avatar-own" : "avatar-other"

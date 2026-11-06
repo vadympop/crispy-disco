@@ -81,6 +81,7 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { statusOption } from "@/lib/status";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 
 const props = defineProps<{ nickName: string }>();
@@ -88,18 +89,26 @@ const props = defineProps<{ nickName: string }>();
 const emit = defineEmits<{ navigated: [] }>();
 
 const chat = useChatStore();
+const auth = useAuthStore();
 const router = useRouter();
 
-const isMe = computed(() => props.nickName === chat.me.nickName);
+// the nick comes from a message or a member list, resolve it to the user once
 const user = computed(() =>
-  isMe.value ? chat.me : chat.findUser(props.nickName)
+  props.nickName === auth.nickname ? auth.me : chat.findUser(props.nickName)
+);
+const isMe = computed(
+  () => user.value !== undefined && user.value?.id === auth.userId
 );
 
 const fullName = computed(() =>
   user.value ? `${user.value.firstName} ${user.value.lastName}` : props.nickName
 );
 const status = computed(() => statusOption(user.value?.status ?? "offline"));
-const stats = computed(() => chat.userStats(props.nickName));
+const stats = computed(() =>
+  user.value
+    ? chat.userStats(user.value)
+    : { messageCount: 0, sharedChannels: [] }
+);
 
 async function openChannel(name: string) {
   emit("navigated");
@@ -107,7 +116,9 @@ async function openChannel(name: string) {
 }
 
 async function startChat() {
-  await openChannel(chat.startDirectChat(props.nickName));
+  if (user.value) {
+    await openChannel(chat.startDirectChat(user.value));
+  }
 }
 </script>
 

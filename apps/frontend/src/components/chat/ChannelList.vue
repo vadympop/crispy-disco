@@ -29,7 +29,7 @@
           #{{ channel.name }}
         </q-item-label>
         <q-item-label caption class="muted">
-          Invitation from {{ channel.adminNick }}
+          Invitation from {{ channel.creator.nickname }}
         </q-item-label>
       </q-item-section>
       <q-item-section side class="row no-wrap">
@@ -68,8 +68,8 @@
     >
       <q-item-section avatar class="channel-icon">
         <UserAvatar
-          v-if="channel.directWith"
-          :nick-name="channel.directWith"
+          v-if="channel.directWithId"
+          :nick-name="chat.directPartner(channel)?.nickname ?? ''"
           size="22px"
           class="dm-avatar"
         />
@@ -81,7 +81,7 @@
       <q-item-section side class="row no-wrap items-center">
         <div class="row no-wrap items-center">
           <q-icon
-            v-if="chat.isAdmin(channel) && !channel.directWith"
+            v-if="chat.isAdmin(channel) && !channel.directWithId"
             name="shield"
             size="16px"
             class="text-disco-yellow q-mr-xs"
@@ -101,7 +101,7 @@
             <q-menu>
               <q-list dense style="min-width: 160px">
                 <q-item
-                  v-if="!channel.directWith"
+                  v-if="!channel.directWithId"
                   v-close-popup
                   clickable
                   @click="leave(channel.name)"
@@ -122,7 +122,7 @@
                     ><q-icon name="delete"
                   /></q-item-section>
                   <q-item-section>{{
-                    channel.directWith ? "Delete chat" : "Delete channel"
+                    channel.directWithId ? "Delete chat" : "Delete channel"
                   }}</q-item-section>
                 </q-item>
               </q-list>

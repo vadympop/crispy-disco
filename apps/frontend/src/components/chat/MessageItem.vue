@@ -22,7 +22,7 @@
             v-if="part.startsWith('@')"
             class="mention"
             :class="{
-              'mention-me cursor-pointer': part === `@${chat.me.nickName}`
+              'mention-me cursor-pointer': part === `@${auth.nickname}`
             }"
             >{{ part }}</span
           >
@@ -37,6 +37,7 @@
 import { computed } from "vue";
 import { date } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
+import { useAuthStore } from "@/stores/auth-store";
 import type { Message } from "@/types/chat";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
@@ -44,13 +45,14 @@ import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
 const props = defineProps<{ message: Message }>();
 
 const chat = useChatStore();
+const auth = useAuthStore();
 
 // "hi @ed !" -> ["hi ", "@ed", " !"]
 const parts = computed(() =>
   props.message.text.split(/(@[\w.-]+)/).filter(part => part !== "")
 );
 
-const mentionsMe = computed(() => parts.value.includes(`@${chat.me.nickName}`));
+const mentionsMe = computed(() => parts.value.includes(`@${auth.nickname}`));
 
 const time = computed(() => date.formatDate(props.message.createdAt, "HH:mm"));
 </script>

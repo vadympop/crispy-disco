@@ -9,11 +9,6 @@ export interface User {
   avatarUrl?: string;
 }
 
-export type ProfileUpdate = Pick<
-  User,
-  "nickName" | "firstName" | "lastName" | "avatarUrl"
->;
-
 export interface Channel {
   // database id; missing for mock channels and local direct chats
   id?: string;
