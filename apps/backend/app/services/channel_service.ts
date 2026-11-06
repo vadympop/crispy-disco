@@ -9,12 +9,10 @@ export const CHANNEL_EXPIRY_DAYS = 30
 type MemberStatus = 'member' | 'invited' | 'banned'
 
 export default class ChannelService {
-
   async listFor(user: User) {
     return user.related('channels').query().whereNotPivot('status', 'banned').preload('creator')
   }
 
- 
   async join(user: User, name: string, isPrivate = false) {
     const { channelId, created } = await db.transaction(async (trx) => {
       const channel = await Channel.query({ client: trx }).where('name', name).forUpdate().first()
@@ -36,7 +34,10 @@ export default class ChannelService {
       const status = await this.statusOf(user, channel)
 
       if (status === 'banned') {
-        throw new Exception(`You are banned from #${name}`, { status: 403, code: 'E_CHANNEL_BANNED' })
+        throw new Exception(`You are banned from #${name}`, {
+          status: 403,
+          code: 'E_CHANNEL_BANNED',
+        })
       }
 
       if (status === 'invited') {
@@ -56,7 +57,6 @@ export default class ChannelService {
 
     return { channel: await this.findForUser(user, channelId), created }
   }
-
 
   async cancel(user: User, name: string) {
     const channel = await this.findByNameOrFail(name)
@@ -78,7 +78,6 @@ export default class ChannelService {
     return { channelDeleted: false }
   }
 
-
   async quit(user: User, name: string) {
     const channel = await this.findByNameOrFail(name)
 
@@ -91,7 +90,6 @@ export default class ChannelService {
 
     await channel.delete()
   }
-
 
   async decline(user: User, name: string) {
     const channel = await this.findByNameOrFail(name)

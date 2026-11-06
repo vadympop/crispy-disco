@@ -34,7 +34,7 @@ router
       .as('profile')
       .use(middleware.auth())
     router
-      .group(()=> {
+      .group(() => {
         router.get('/', [controllers.Channels, 'index'])
         router.post('join', [controllers.Channels, 'join'])
         router.post(':name/cancel', [controllers.Channels, 'cancel'])
@@ -43,6 +43,5 @@ router
       })
       .prefix('channels')
       .use(middleware.auth())
-      
   })
   .prefix('/api/v1')
