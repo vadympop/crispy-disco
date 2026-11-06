@@ -152,7 +152,6 @@ export default class ChannelService {
     return channel
   }
 
-
   private async findForUser(user: User, channelId: string) {
     return user
       .related('channels')
@@ -162,8 +161,6 @@ export default class ChannelService {
       .firstOrFail()
   }
 
-
-  // Relation queries reuse the channel's transaction when it was loaded inside one
   private async statusOf(user: User, channel: Channel): Promise<MemberStatus | null> {
     const row = await channel.related('members').pivotQuery().where('user_id', user.id).first()
     return row ? (row.status as MemberStatus) : null

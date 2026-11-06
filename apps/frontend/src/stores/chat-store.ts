@@ -10,9 +10,7 @@ import type {
   UserStats,
   UserStatus
 } from "@/types/chat";
-import type { ApiChannel } from "@/types/api";
 import { client } from "@/lib/client";
-import { apiErrorMessage } from "@/lib/api-error";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
 import {
@@ -48,17 +46,8 @@ function notifyInfo(message: string) {
   Notify.create({ type: "info", message });
 }
 
-// The API shape -> the shape the chat UI works with
-function toChannel(channel: ApiChannel): Channel {
-  return {
-    id: channel.id,
-    name: channel.name,
-    isPrivate: channel.isPrivate,
-    adminNick: channel.adminNick,
-    invited: channel.invited,
-    lastMessageAt: channel.lastMessageAt ?? ""
-  };
-}
+// API errors are not caught here: they reach the global handler in
+// boot/api-errors.ts, which shows the server's message and handles 401
 
 export const useChatStore = defineStore("chat", () => {
   const auth = useAuthStore();
@@ -93,9 +82,7 @@ export const useChatStore = defineStore("chat", () => {
     isLoadingChannels.value = true;
     try {
       const result = await client.api.channels.index({});
-      channels.value = result.data.map(toChannel);
-    } catch {
-      notifyError("Could not load your channels");
+      channels.value = result.data;
     } finally {
       isLoadingChannels.value = false;
     }
@@ -127,9 +114,9 @@ export const useChatStore = defineStore("chat", () => {
     return channel.directWith ? channelTitle(channel) : `#${channel.name}`;
   }
 
-  // The logged-in user's nick; the mock one only until the profile is loaded
+  // The logged-in user's nick; undefined until the profile is loaded
   function myNick() {
-    return auth.me?.nickname ?? me.value.nickName;
+    return auth.me?.nickname;
   }
 
   function isAdmin(channel: Channel) {
@@ -195,26 +182,21 @@ export const useChatStore = defineStore("chat", () => {
       return true;
     }
 
-    try {
-      const result = await client.api.channels.join({ body: { name, isPrivate } });
-      const { channel, created } = result.data;
-      upsertChannel(toChannel(channel));
+    const result = await client.api.channels.join({ body: { name, isPrivate } });
+    const { channel, created } = result.data;
+    upsertChannel(channel);
 
-      const current = members.value[name] ?? [];
-      if (!current.includes(me.value.nickName)) {
-        members.value[name] = [...current, me.value.nickName];
-      }
-
-      if (created) {
-        notifyInfo(`Created ${channel.isPrivate ? "private" : "public"} channel #${name}`);
-      } else {
-        notifyInfo(`Joined #${name}`);
-      }
-      return true;
-    } catch (error) {
-      notifyError(apiErrorMessage(error, `Could not join #${name}`));
-      return false;
+    const current = members.value[name] ?? [];
+    if (!current.includes(me.value.nickName)) {
+      members.value[name] = [...current, me.value.nickName];
     }
+
+    if (created) {
+      notifyInfo(`Created ${channel.isPrivate ? "private" : "public"} channel #${name}`);
+    } else {
+      notifyInfo(`Joined #${name}`);
+    }
+    return true;
   }
 
   // Opens the private chat with `nick`, creating it the first time.
@@ -283,15 +265,10 @@ export const useChatStore = defineStore("chat", () => {
       return true;
     }
 
-    try {
-      const { channelDeleted } = await client.api.channels.cancel({ params: { name } });
-      forgetChannel(name);
-      notifyInfo(channelDeleted ? `#${name} was deleted` : `You left #${name}`);
-      return true;
-    } catch (error) {
-      notifyError(apiErrorMessage(error, `Could not leave #${name}`));
-      return false;
-    }
+    const { channelDeleted } = await client.api.channels.cancel({ params: { name } });
+    forgetChannel(name);
+    notifyInfo(channelDeleted ? `#${name} was deleted` : `You left #${name}`);
+    return true;
   }
 
   // /quit: the admin closes the channel (the server checks the admin rights)
@@ -307,15 +284,10 @@ export const useChatStore = defineStore("chat", () => {
       return true;
     }
 
-    try {
-      await client.api.channels.destroy({ params: { name } });
-      forgetChannel(name);
-      notifyInfo(`#${name} was deleted`);
-      return true;
-    } catch (error) {
-      notifyError(apiErrorMessage(error, `Could not delete #${name}`));
-      return false;
-    }
+    await client.api.channels.destroy({ params: { name } });
+    forgetChannel(name);
+    notifyInfo(`#${name} was deleted`);
+    return true;
   }
 
   // Accepting an invite is the same as joining the channel
@@ -323,15 +295,9 @@ export const useChatStore = defineStore("chat", () => {
     return joinChannel(name, false);
   }
 
-  async function declineInvite(name: string): Promise<boolean> {
-    try {
-      await client.api.channels.decline({ params: { name } });
-      removeChannel(name);
-      return true;
-    } catch (error) {
-      notifyError(apiErrorMessage(error, `Could not decline the invite to #${name}`));
-      return false;
-    }
+  async function declineInvite(name: string) {
+    await client.api.channels.decline({ params: { name } });
+    removeChannel(name);
   }
 
   function setStatus(status: UserStatus) {

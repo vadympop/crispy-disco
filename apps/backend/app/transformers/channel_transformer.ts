@@ -10,7 +10,7 @@ export default class ChannelTransformer extends BaseTransformer<Channel> {
       isPrivate: channel.type === 'private',
       adminNick: channel.creator.nickname,
       invited: channel.$extras.pivot_status === 'invited',
-      lastMessageAt: (channel.lastActivityAt ?? channel.createdAt)?.toISO() ?? null,
+      lastMessageAt: (channel.lastActivityAt ?? channel.createdAt)?.toISO() ?? '',
     }
   }
 }
