@@ -12,4 +12,13 @@
  *   readonly MY_OTHER_VAR: string;
  * }
  */
+import 'vue-router'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    guestOnly?: boolean
+  }
+}
+
 interface ImportMetaEnv {}

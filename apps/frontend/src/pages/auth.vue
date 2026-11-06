@@ -8,6 +8,10 @@
   </q-layout>
 </template>
 
+<script setup lang="ts">
+definePage({ meta: { guestOnly: true } })
+</script>
+
 <style scoped>
 .auth-page {
   background: #505ba3;
