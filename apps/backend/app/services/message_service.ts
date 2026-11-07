@@ -7,6 +7,7 @@ import Message from '#models/message'
 import type User from '#models/user'
 import ChannelService from '#services/channel_service'
 import { decodeCursor } from '#services/message_cursor'
+import realtime from '#services/realtime_service'
 
 export const DEFAULT_PAGE_SIZE = 50
 
@@ -84,7 +85,7 @@ export default class MessageService {
     })
 
     await message.load('author')
-    // TODO(realtime): emit message:new to the channel room
+    await realtime.messageNew(message)
     return message
   }
 
@@ -113,7 +114,7 @@ export default class MessageService {
     })
 
     await message.load('author')
-    // TODO(realtime): emit message:updated to the channel room
+    await realtime.messageUpdated(message)
     return message
   }
 
@@ -131,7 +132,7 @@ export default class MessageService {
 
     message.deletedAt = DateTime.now()
     await message.save()
-    // TODO(realtime): emit message:deleted to the channel room
+    realtime.messageDeleted(channel.id, message.id)
   }
 
   private async findVisible(channel: Channel, messageId: string) {
