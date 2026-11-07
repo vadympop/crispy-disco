@@ -11,15 +11,10 @@ export type ChannelData = InferData<ChannelTransformer>
 export type SocketUser = { id: string; nickname: string }
 export type RemovedReason = 'revoked' | 'banned'
 
-/**
- * Events the server sends. The frontend imports these types through
- * `@cisco-disco/backend/realtime`, so both sides agree on the payloads.
- */
 export interface ServerToClientEvents {
   'message:new': (message: MessageData) => void
   'message:updated': (message: MessageData) => void
   'message:deleted': (payload: { channelId: string; messageId: string }) => void
-  // an empty text means the user stopped typing
   'typing': (payload: { channelId: string; user: SocketUser; text: string }) => void
   'channel:invited': (channel: ChannelData) => void
   'channel:added': (channel: ChannelData) => void
@@ -42,7 +37,6 @@ export type RealtimeServer = Server<
   SocketData
 >
 
-// every socket joins its user's room, and one room per channel it is a member of
 export function userRoom(userId: string) {
   return `user:${userId}`
 }
@@ -51,8 +45,6 @@ export function channelRoom(channelId: string) {
   return `channel:${channelId}`
 }
 
-// Same transformers as the API, but without the { data } wrapper of HTTP
-// responses. Socket payloads are never paginated.
 class SocketSerializer extends BaseSerializer {
   wrap = undefined
 
@@ -63,11 +55,6 @@ class SocketSerializer extends BaseSerializer {
 
 const serializer = new SocketSerializer()
 
-/**
- * Services call this after a change is saved. The socket server only exists
- * in the web process (start/socket.ts), so in tests and ace commands every
- * method does nothing.
- */
 class RealtimeService {
   private io: RealtimeServer | null = null
 
@@ -103,7 +90,6 @@ class RealtimeService {
     this.io?.to(channelRoom(channelId)).emit('message:deleted', { channelId, messageId })
   }
 
-  // `channel` must be loaded for the invited user, so `invited` is true
   async channelInvited(userId: string, channel: Channel) {
     if (!this.io) return
     const data = await serializer.serialize(ChannelTransformer.transform(channel))

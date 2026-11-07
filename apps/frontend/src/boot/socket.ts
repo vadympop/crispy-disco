@@ -6,8 +6,6 @@ import { useAuthStore } from "@/stores/auth-store";
 export default defineBoot(() => {
   const auth = useAuthStore();
 
-  // Offline stops message delivery: the socket is closed, and the chat store
-  // catches up with ?after=<cursor> once it is connected again.
   watch(
     () => auth.isLoggedIn && auth.me?.status !== "offline",
     shouldConnect => {

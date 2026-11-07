@@ -8,7 +8,6 @@ import User from '#models/user'
 import realtime, { channelRoom, userRoom, type RealtimeServer } from '#services/realtime_service'
 import { MAX_MESSAGE_LENGTH } from '#validators/message'
 
-// Preloads run before the HTTP server exists, it is ready in app.ready
 app.ready(() => {
   const nodeServer = server.getNodeServer()
   if (!nodeServer) {
@@ -18,11 +17,9 @@ app.ready(() => {
 
   // https://socket.io/docs/v4/server-initialization/#with-an-http-server
   const io: RealtimeServer = new Server(nodeServer, {
-    // the same origins as config/cors.ts
     cors: { origin: app.inDev ? true : [] },
   })
 
-  // The client sends the same access token as the API: io(url, { auth: { token } })
   // https://socket.io/docs/v4/middlewares/#sending-credentials
   io.use(async (socket, next) => {
     try {
@@ -44,8 +41,6 @@ app.ready(() => {
   io.on('connection', async (socket) => {
     const user = socket.data.user
 
-    // Being in the channel room means being a member, so the draft only goes
-    // to other members. The text is the live preview of the draft.
     socket.on('typing', (draft) => {
       if (typeof draft?.channelId !== 'string' || typeof draft.text !== 'string') return
       const room = channelRoom(draft.channelId)
@@ -74,7 +69,6 @@ app.ready(() => {
 
   realtime.attach(io)
 
-  // open sockets would keep the HTTP server from closing on shutdown
   app.terminating(() => {
     realtime.detach()
     io.disconnectSockets(true)

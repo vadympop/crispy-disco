@@ -263,7 +263,6 @@ export default class ChannelService {
       return { target, status: 'invited' as const, unbanned: false }
     })
 
-    // loaded through the target, so the channel arrives with `invited: true`
     await realtime.channelInvited(invited.id, await this.findOne(invited, channelId))
     return result
   }
@@ -386,7 +385,6 @@ export default class ChannelService {
       return { targetId: target.id, banned, votes, required: KICKS_TO_BAN }
     })
 
-    // a vote alone changes nothing for the target, only the ban removes them
     if (result.banned) {
       realtime.channelRemoved(targetId, channelId, 'banned')
     }
