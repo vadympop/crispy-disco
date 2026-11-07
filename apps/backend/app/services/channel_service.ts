@@ -255,6 +255,48 @@ export default class ChannelService {
     })
   }
 
+  /**
+   * /revoke nickname: the admin of a private channel removes a member or
+   * takes back an invite
+   */
+  async revoke(user: User, channelId: string, nickname: string) {
+    await db.transaction(async (trx) => {
+      const channel = await this.lockOrFail(channelId, trx)
+
+      if (channel.type !== 'private') {
+        throw new Exception('/revoke works only in private channels, use /kick', {
+          status: 422,
+          code: 'E_NOT_PRIVATE_CHANNEL',
+        })
+      }
+      if (!this.isAdmin(user, channel)) {
+        throw new Exception('Only the admin can revoke access', {
+          status: 403,
+          code: 'E_NOT_CHANNEL_ADMIN',
+        })
+      }
+
+      const target = await this.findUserByNickname(nickname, trx)
+      if (target.id === user.id) {
+        throw new Exception("You can't revoke yourself, use /quit", {
+          status: 422,
+          code: 'E_TARGET_SELF',
+        })
+      }
+
+      const status = await this.statusOf(target, channel)
+      if (status !== 'member' && status !== 'invited') {
+        throw new Exception(`${target.nickname} is not in #${channel.name}`, {
+          status: 404,
+          code: 'E_NOT_A_MEMBER',
+        })
+      }
+
+      await channel.related('members').detach([target.id], trx)
+      // TODO(realtime): emit channel:removed to the target
+    })
+  }
+
   async touch(channel: Channel) {
     channel.lastActivityAt = DateTime.now()
     await channel.save()
