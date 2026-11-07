@@ -1,4 +1,5 @@
 import vine from '@vinejs/vine'
+import { nickname } from '#validators/user'
 
 /**
  * Same rule as the frontend: 2-30 characters, letters, numbers, _ and -
@@ -22,4 +23,11 @@ export const joinChannelValidator = vine.create({
  */
 export const startDirectValidator = vine.create({
   userId: vine.string().uuid(),
+})
+
+/**
+ * /invite, /revoke and /kick: the nickname the user typed
+ */
+export const moderationTargetValidator = vine.create({
+  nickname: nickname(),
 })
