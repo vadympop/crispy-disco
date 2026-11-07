@@ -6,6 +6,7 @@ import type Channel from '#models/channel'
 import Message from '#models/message'
 import type User from '#models/user'
 import ChannelService from '#services/channel_service'
+import { decodeCursor } from '#services/message_cursor'
 
 export const DEFAULT_PAGE_SIZE = 50
 
@@ -28,15 +29,20 @@ export default class MessageService {
       .whereNull('deleted_at')
       .preload('author')
 
-    const cursorId = cursor.after ?? cursor.before
-    if (cursorId !== undefined) {
-      await this.findInChannel(channel, cursorId)
+    const cursorValue = cursor.after ?? cursor.before
+    if (cursorValue !== undefined) {
+      const position = decodeCursor(cursorValue)
+      if (!position) {
+        throw new Exception('That cursor is not valid', {
+          status: 422,
+          code: 'E_INVALID_CURSOR',
+        })
+      }
 
-      const cursorTime = db.from('messages').select('created_at').where('id', cursorId)
       const op = forward ? '>' : '<'
       query.where((q) => {
-        q.where('created_at', op, cursorTime).orWhere((tie) => {
-          tie.where('created_at', cursorTime).where('id', op, cursorId)
+        q.where('created_at', op, position.createdAt).orWhere((tie) => {
+          tie.where('created_at', position.createdAt).where('id', op, position.id)
         })
       })
     }
@@ -128,23 +134,13 @@ export default class MessageService {
     // TODO(realtime): emit message:deleted to the channel room
   }
 
-  private async findInChannel(channel: Channel, messageId: string) {
+  private async findVisible(channel: Channel, messageId: string) {
     const message = await Message.query()
       .where('id', messageId)
       .where('channel_id', channel.id)
+      .whereNull('deleted_at')
       .first()
     if (!message) {
-      throw new Exception('That message does not exist in this channel', {
-        status: 404,
-        code: 'E_MESSAGE_NOT_FOUND',
-      })
-    }
-    return message
-  }
-
-  private async findVisible(channel: Channel, messageId: string) {
-    const message = await this.findInChannel(channel, messageId)
-    if (message.deletedAt) {
       throw new Exception('That message does not exist in this channel', {
         status: 404,
         code: 'E_MESSAGE_NOT_FOUND',

@@ -5,6 +5,7 @@ import db from '@adonisjs/lucid/services/db'
 import Channel from '#models/channel'
 import Message from '#models/message'
 import User from '#models/user'
+import { encodeCursor } from '#services/message_cursor'
 
 function unique(base: string) {
   return `${base}_${Math.random().toString(36).slice(2, 8)}`
@@ -45,11 +46,23 @@ async function seedMessages(channel: Channel, author: User, count: number, sameT
   return ids
 }
 
+async function cursorOf(id: string | undefined) {
+  if (!id) {
+    throw new Error('no message with that index was seeded')
+  }
+  return encodeCursor(await Message.findOrFail(id))
+}
+
 type SentBody = { data: { id: string } }
 type EditedBody = { data: { content: string; editedAt: string | null } }
 type HistoryBody = {
   data: {
-    messages: { id: string; content: string; author: { id: string; nickname: string } }[]
+    messages: {
+      id: string
+      content: string
+      cursor: string
+      author: { id: string; nickname: string }
+    }[]
     hasMore: boolean
   }
 }
@@ -178,11 +191,17 @@ test.group('Messages / history', (group) => {
     const messages = await seedMessages(channel, alice, 5)
     const url = `/api/v1/channels/${channel.id}/messages`
 
-    const older = await client.get(url).qs({ before: messages[3], limit: 2 }).loginAs(alice)
+    const older = await client
+      .get(url)
+      .qs({ before: await cursorOf(messages[3]), limit: 2 })
+      .loginAs(alice)
     assert.deepEqual(page(older).ids, messages.slice(1, 3))
     assert.isTrue(page(older).hasMore)
 
-    const last = await client.get(url).qs({ before: messages[1], limit: 2 }).loginAs(alice)
+    const last = await client
+      .get(url)
+      .qs({ before: await cursorOf(messages[1]), limit: 2 })
+      .loginAs(alice)
     assert.deepEqual(page(last).ids, messages.slice(0, 1))
     assert.isFalse(page(last).hasMore)
   })
@@ -193,11 +212,17 @@ test.group('Messages / history', (group) => {
     const messages = await seedMessages(channel, alice, 5)
     const url = `/api/v1/channels/${channel.id}/messages`
 
-    const all = await client.get(url).qs({ after: messages[1] }).loginAs(alice)
+    const all = await client
+      .get(url)
+      .qs({ after: await cursorOf(messages[1]) })
+      .loginAs(alice)
     assert.deepEqual(page(all).ids, messages.slice(2))
     assert.isFalse(page(all).hasMore)
 
-    const limited = await client.get(url).qs({ after: messages[1], limit: 2 }).loginAs(alice)
+    const limited = await client
+      .get(url)
+      .qs({ after: await cursorOf(messages[1]), limit: 2 })
+      .loginAs(alice)
     assert.deepEqual(page(limited).ids, messages.slice(2, 4))
     assert.isTrue(page(limited).hasMore)
   })
@@ -215,7 +240,8 @@ test.group('Messages / history', (group) => {
     let response = await client.get(url).qs({ limit: 1 }).loginAs(alice)
     seen.unshift(...page(response).ids)
     while (page(response).hasMore) {
-      response = await client.get(url).qs({ before: seen[0], limit: 1 }).loginAs(alice)
+      const before = page(response).messages[0]?.cursor
+      response = await client.get(url).qs({ before, limit: 1 }).loginAs(alice)
       seen.unshift(...page(response).ids)
     }
 
@@ -223,18 +249,17 @@ test.group('Messages / history', (group) => {
     assert.lengthOf(seen, messages.length)
   })
 
-  test('a cursor from another channel is rejected', async ({ client }) => {
+  test('a cursor that the server did not issue is rejected', async ({ client }) => {
     const alice = await createUser('alice')
     const channel = await createChannel(alice)
-    const other = await createChannel(alice)
-    const [foreign] = await seedMessages(other, alice, 1)
+    const [messageId] = await seedMessages(channel, alice, 1)
+    const url = `/api/v1/channels/${channel.id}/messages`
 
-    const response = await client
-      .get(`/api/v1/channels/${channel.id}/messages`)
-      .qs({ before: foreign })
-      .loginAs(alice)
+    const plainId = await client.get(url).qs({ before: messageId }).loginAs(alice)
+    plainId.assertStatus(422)
 
-    response.assertStatus(404)
+    const garbage = await client.get(url).qs({ after: 'not-a-cursor' }).loginAs(alice)
+    garbage.assertStatus(422)
   })
 
   test('limit above the maximum is rejected', async ({ client }) => {
@@ -270,21 +295,44 @@ test.group('Messages / delete', (group) => {
     )
   })
 
-  test('a deleted message still works as a cursor', async ({ client, assert }) => {
+  test('a cursor keeps working after its message is deleted', async ({ client, assert }) => {
     const alice = await createUser('alice')
     const channel = await createChannel(alice)
     const messages = await seedMessages(channel, alice, 5)
     const url = `/api/v1/channels/${channel.id}/messages`
+    const cursor = await cursorOf(messages[2])
 
     await client.delete(`${url}/${messages[2]}`).loginAs(alice)
 
-    const older = await client.get(url).qs({ before: messages[2] }).loginAs(alice)
+    const older = await client.get(url).qs({ before: cursor }).loginAs(alice)
     older.assertStatus(200)
     assert.deepEqual(page(older).ids, messages.slice(0, 2))
 
-    const newer = await client.get(url).qs({ after: messages[2] }).loginAs(alice)
+    const newer = await client.get(url).qs({ after: cursor }).loginAs(alice)
     newer.assertStatus(200)
     assert.deepEqual(page(newer).ids, messages.slice(3, 5))
+  })
+
+  test('a cursor keeps working after its row is removed from the database', async ({
+    client,
+    assert,
+  }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const messages = await seedMessages(channel, alice, 3)
+    const cursor = await cursorOf(messages[1])
+
+    await db
+      .from('messages')
+      .where('id', messages[1] ?? '')
+      .delete()
+
+    const older = await client
+      .get(`/api/v1/channels/${channel.id}/messages`)
+      .qs({ before: cursor })
+      .loginAs(alice)
+    older.assertStatus(200)
+    assert.deepEqual(page(older).ids, messages.slice(0, 1))
   })
 
   test('the admin can delete any message, other members only their own', async ({ client }) => {

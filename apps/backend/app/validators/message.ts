@@ -4,8 +4,8 @@ export const MAX_PAGE_SIZE = 100
 export const MAX_MESSAGE_LENGTH = 2000
 
 export const messageHistoryValidator = vine.create({
-  before: vine.string().uuid().optional(),
-  after: vine.string().uuid().optional(),
+  before: vine.string().optional(),
+  after: vine.string().optional(),
   limit: vine.number().withoutDecimals().range([1, MAX_PAGE_SIZE]).optional(),
 })
 
