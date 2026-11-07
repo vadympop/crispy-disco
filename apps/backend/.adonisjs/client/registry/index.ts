@@ -72,6 +72,24 @@ const routes = {
     tokens: [{"old":"/api/v1/channels/:id/decline","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/decline","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/decline","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/decline","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/decline","type":0,"val":"decline","end":""}],
     types: placeholder as Registry['channels.decline']['types'],
   },
+  'channels.invite': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:id/invite',
+    tokens: [{"old":"/api/v1/channels/:id/invite","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/invite","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/invite","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/invite","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/invite","type":0,"val":"invite","end":""}],
+    types: placeholder as Registry['channels.invite']['types'],
+  },
+  'channels.revoke': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:id/revoke',
+    tokens: [{"old":"/api/v1/channels/:id/revoke","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/revoke","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/revoke","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/revoke","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/revoke","type":0,"val":"revoke","end":""}],
+    types: placeholder as Registry['channels.revoke']['types'],
+  },
+  'channels.kick': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:id/kick',
+    tokens: [{"old":"/api/v1/channels/:id/kick","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/kick","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/kick","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/kick","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/kick","type":0,"val":"kick","end":""}],
+    types: placeholder as Registry['channels.kick']['types'],
+  },
   'channels.destroy': {
     methods: ["DELETE"],
     pattern: '/api/v1/channels/:id',

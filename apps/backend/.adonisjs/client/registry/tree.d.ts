@@ -26,6 +26,9 @@ export interface ApiDefinition {
     members: typeof routes['channels.members']
     cancel: typeof routes['channels.cancel']
     decline: typeof routes['channels.decline']
+    invite: typeof routes['channels.invite']
+    revoke: typeof routes['channels.revoke']
+    kick: typeof routes['channels.kick']
     destroy: typeof routes['channels.destroy']
   }
   users: {
