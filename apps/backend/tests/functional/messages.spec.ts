@@ -31,7 +31,7 @@ async function createChannel(admin: User, members: User[] = []) {
 
 async function seedMessages(channel: Channel, author: User, count: number, sameTime = false) {
   const start = DateTime.now().minus({ hours: 1 })
-  const messages: Message[] = []
+  const ids: string[] = []
   for (let i = 0; i < count; i++) {
     const message = await Message.create({
       channelId: channel.id,
@@ -40,9 +40,9 @@ async function seedMessages(channel: Channel, author: User, count: number, sameT
     })
     const createdAt = sameTime ? start : start.plus({ minutes: i })
     await Message.query().where('id', message.id).update({ created_at: createdAt.toJSDate() })
-    messages.push(message)
+    ids.push(message.id)
   }
-  return messages
+  return ids
 }
 
 type SentBody = { data: { id: string } }
@@ -166,9 +166,9 @@ test.group('Messages / history', (group) => {
       .loginAs(alice)
 
     response.assertStatus(200)
-    assert.deepEqual(page(response).ids, [messages[3].id, messages[4].id])
+    assert.deepEqual(page(response).ids, messages.slice(3, 5))
     assert.isTrue(page(response).hasMore)
-    assert.properties(page(response).messages[0].author, ['id', 'nickname'])
+    assert.properties(page(response).messages[0]?.author, ['id', 'nickname'])
   })
 
   test('before pages backwards until the first message', async ({ client, assert }) => {
@@ -177,12 +177,12 @@ test.group('Messages / history', (group) => {
     const messages = await seedMessages(channel, alice, 5)
     const url = `/api/v1/channels/${channel.id}/messages`
 
-    const older = await client.get(url).qs({ before: messages[3].id, limit: 2 }).loginAs(alice)
-    assert.deepEqual(page(older).ids, [messages[1].id, messages[2].id])
+    const older = await client.get(url).qs({ before: messages[3], limit: 2 }).loginAs(alice)
+    assert.deepEqual(page(older).ids, messages.slice(1, 3))
     assert.isTrue(page(older).hasMore)
 
-    const last = await client.get(url).qs({ before: messages[1].id, limit: 2 }).loginAs(alice)
-    assert.deepEqual(page(last).ids, [messages[0].id])
+    const last = await client.get(url).qs({ before: messages[1], limit: 2 }).loginAs(alice)
+    assert.deepEqual(page(last).ids, messages.slice(0, 1))
     assert.isFalse(page(last).hasMore)
   })
 
@@ -192,15 +192,12 @@ test.group('Messages / history', (group) => {
     const messages = await seedMessages(channel, alice, 5)
     const url = `/api/v1/channels/${channel.id}/messages`
 
-    const all = await client.get(url).qs({ after: messages[1].id }).loginAs(alice)
-    assert.deepEqual(
-      page(all).ids,
-      messages.slice(2).map((message) => message.id)
-    )
+    const all = await client.get(url).qs({ after: messages[1] }).loginAs(alice)
+    assert.deepEqual(page(all).ids, messages.slice(2))
     assert.isFalse(page(all).hasMore)
 
-    const limited = await client.get(url).qs({ after: messages[1].id, limit: 2 }).loginAs(alice)
-    assert.deepEqual(page(limited).ids, [messages[2].id, messages[3].id])
+    const limited = await client.get(url).qs({ after: messages[1], limit: 2 }).loginAs(alice)
+    assert.deepEqual(page(limited).ids, messages.slice(2, 4))
     assert.isTrue(page(limited).hasMore)
   })
 
@@ -221,10 +218,7 @@ test.group('Messages / history', (group) => {
       seen.unshift(...page(response).ids)
     }
 
-    assert.sameMembers(
-      seen,
-      messages.map((message) => message.id)
-    )
+    assert.sameMembers(seen, messages)
     assert.lengthOf(seen, messages.length)
   })
 
@@ -236,7 +230,7 @@ test.group('Messages / history', (group) => {
 
     const response = await client
       .get(`/api/v1/channels/${channel.id}/messages`)
-      .qs({ before: foreign.id })
+      .qs({ before: foreign })
       .loginAs(alice)
 
     response.assertStatus(404)
@@ -252,5 +246,75 @@ test.group('Messages / history', (group) => {
       .loginAs(alice)
 
     response.assertStatus(422)
+  })
+})
+
+test.group('Messages / delete', (group) => {
+  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
+
+  test('the author deletes a message and it leaves the history', async ({ client, assert }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const messages = await seedMessages(channel, alice, 3)
+    const url = `/api/v1/channels/${channel.id}/messages`
+
+    const deleted = messages[1]
+    const response = await client.delete(`${url}/${deleted}`).loginAs(alice)
+    response.assertStatus(204)
+
+    const history = await client.get(url).loginAs(alice)
+    assert.deepEqual(
+      page(history).ids,
+      messages.filter((id) => id !== deleted)
+    )
+  })
+
+  test('a deleted message still works as a cursor', async ({ client, assert }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const messages = await seedMessages(channel, alice, 5)
+    const url = `/api/v1/channels/${channel.id}/messages`
+
+    await client.delete(`${url}/${messages[2]}`).loginAs(alice)
+
+    const older = await client.get(url).qs({ before: messages[2] }).loginAs(alice)
+    older.assertStatus(200)
+    assert.deepEqual(page(older).ids, messages.slice(0, 2))
+
+    const newer = await client.get(url).qs({ after: messages[2] }).loginAs(alice)
+    newer.assertStatus(200)
+    assert.deepEqual(page(newer).ids, messages.slice(3, 5))
+  })
+
+  test('the admin can delete any message, other members only their own', async ({ client }) => {
+    const alice = await createUser('alice')
+    const bob = await createUser('bob')
+    const carol = await createUser('carol')
+    const channel = await createChannel(alice, [bob, carol])
+    const [fromBob] = await seedMessages(channel, bob, 1)
+    const url = `/api/v1/channels/${channel.id}/messages/${fromBob}`
+
+    const byCarol = await client.delete(url).loginAs(carol)
+    byCarol.assertStatus(403)
+
+    const byAdmin = await client.delete(url).loginAs(alice)
+    byAdmin.assertStatus(204)
+  })
+
+  test('deleting twice or from another channel returns 404', async ({ client }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const other = await createChannel(alice)
+    const [messageId] = await seedMessages(channel, alice, 1)
+
+    const wrongChannel = await client
+      .delete(`/api/v1/channels/${other.id}/messages/${messageId}`)
+      .loginAs(alice)
+    wrongChannel.assertStatus(404)
+
+    const url = `/api/v1/channels/${channel.id}/messages/${messageId}`
+    await client.delete(url).loginAs(alice)
+    const again = await client.delete(url).loginAs(alice)
+    again.assertStatus(404)
   })
 })

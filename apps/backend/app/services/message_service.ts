@@ -1,4 +1,5 @@
 import { inject } from '@adonisjs/core'
+import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import { Exception } from '@adonisjs/core/exceptions'
 import type Channel from '#models/channel'
@@ -79,6 +80,29 @@ export default class MessageService {
     await message.load('author')
     // TODO(realtime): emit message:new to the channel room
     return message
+  }
+
+  async delete(user: User, channelId: string, messageId: string) {
+    const channel = await this.channelService.findOrFail(channelId)
+    await this.channelService.ensureMember(user, channel)
+
+    const message = await this.findInChannel(channel, messageId)
+    if (message.deletedAt) {
+      throw new Exception('That message does not exist in this channel', {
+        status: 404,
+        code: 'E_MESSAGE_NOT_FOUND',
+      })
+    }
+    if (message.authorId !== user.id && !this.channelService.isAdmin(user, channel)) {
+      throw new Exception('You can only delete your own messages', {
+        status: 403,
+        code: 'E_NOT_MESSAGE_AUTHOR',
+      })
+    }
+
+    message.deletedAt = DateTime.now()
+    await message.save()
+    // TODO(realtime): emit message:deleted to the channel room
   }
 
   private async findInChannel(channel: Channel, messageId: string) {

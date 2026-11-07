@@ -34,6 +34,7 @@ export interface ApiDefinition {
   messages: {
     index: typeof routes['messages.index']
     store: typeof routes['messages.store']
+    destroy: typeof routes['messages.destroy']
   }
   users: {
     show: typeof routes['users.show']

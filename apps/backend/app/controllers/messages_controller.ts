@@ -26,4 +26,9 @@ export default class MessagesController {
     response.status(201)
     return serialize(MessageTransformer.transform(message))
   }
+
+  async destroy({ auth, params, response }: HttpContext) {
+    await this.messageService.delete(auth.getUserOrFail(), params.id, params.messageId)
+    return response.noContent()
+  }
 }

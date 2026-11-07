@@ -48,6 +48,9 @@ router
         router.post(':id/kick', [controllers.Channels, 'kick'])
         router.get(':id/messages', [controllers.Messages, 'index'])
         router.post(':id/messages', [controllers.Messages, 'store'])
+        router
+          .delete(':id/messages/:messageId', [controllers.Messages, 'destroy'])
+          .where('messageId', router.matchers.uuid())
         router.delete(':id', [controllers.Channels, 'destroy'])
       })
       .where('id', router.matchers.uuid())
