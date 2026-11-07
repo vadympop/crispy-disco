@@ -409,7 +409,7 @@ export default class ChannelService {
     return channel.creatorId === user.id
   }
 
-  private async findOrFail(channelId: string) {
+  async findOrFail(channelId: string) {
     const channel = await Channel.find(channelId)
     if (!channel) {
       throw new Exception('That channel does not exist', {
@@ -433,7 +433,7 @@ export default class ChannelService {
     return channel
   }
 
-  private async ensureMember(user: User, channel: Channel) {
+  async ensureMember(user: User, channel: Channel) {
     if ((await this.statusOf(user, channel)) !== 'member') {
       throw new Exception(`You are not a member of #${channel.name}`, {
         status: 403,
