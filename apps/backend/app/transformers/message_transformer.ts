@@ -7,7 +7,14 @@ export default class MessageTransformer extends BaseTransformer<Message> {
     const message = this.resource
 
     return {
-      ...this.pick(message, ['id', 'channelId', 'content', 'parentMessageId', 'createdAt']),
+      ...this.pick(message, [
+        'id',
+        'channelId',
+        'content',
+        'parentMessageId',
+        'createdAt',
+        'editedAt',
+      ]),
       author: UserSummaryTransformer.transform(message.author),
     }
   }

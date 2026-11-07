@@ -46,9 +46,10 @@ async function seedMessages(channel: Channel, author: User, count: number, sameT
 }
 
 type SentBody = { data: { id: string } }
+type EditedBody = { data: { content: string; editedAt: string | null } }
 type HistoryBody = {
   data: {
-    messages: { id: string; author: { id: string; nickname: string } }[]
+    messages: { id: string; content: string; author: { id: string; nickname: string } }[]
     hasMore: boolean
   }
 }
@@ -316,5 +317,95 @@ test.group('Messages / delete', (group) => {
     await client.delete(url).loginAs(alice)
     const again = await client.delete(url).loginAs(alice)
     again.assertStatus(404)
+  })
+})
+
+test.group('Messages / edit', (group) => {
+  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
+
+  test('the author edits a message and it is marked as edited', async ({ client, assert }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const [messageId] = await seedMessages(channel, alice, 1)
+    const url = `/api/v1/channels/${channel.id}/messages`
+
+    const response = await client
+      .patch(`${url}/${messageId}`)
+      .loginAs(alice)
+      .json({ content: '  fixed typo  ' })
+
+    response.assertStatus(200)
+    const edited = response.body() as EditedBody
+    assert.equal(edited.data.content, 'fixed typo')
+    assert.isNotNull(edited.data.editedAt)
+
+    const history = await client.get(url).loginAs(alice)
+    assert.deepEqual(page(history).ids, [messageId])
+    assert.equal(page(history).messages[0]?.content, 'fixed typo')
+  })
+
+  test('editing replaces the saved mentions', async ({ client, assert }) => {
+    const alice = await createUser('alice')
+    const bob = await createUser('bob')
+    const carol = await createUser('carol')
+    const channel = await createChannel(alice, [bob, carol])
+    const url = `/api/v1/channels/${channel.id}/messages`
+
+    const sent = await client
+      .post(url)
+      .loginAs(alice)
+      .json({ content: `hi @${bob.nickname}` })
+    const id = (sent.body() as SentBody).data.id
+
+    await client
+      .patch(`${url}/${id}`)
+      .loginAs(alice)
+      .json({ content: `hi @${carol.nickname}` })
+
+    const message = await Message.findOrFail(id)
+    await message.load('mentions')
+    assert.deepEqual(
+      message.mentions.map((user) => user.id),
+      [carol.id]
+    )
+  })
+
+  test('nobody else can edit a message, not even the admin', async ({ client }) => {
+    const alice = await createUser('alice')
+    const bob = await createUser('bob')
+    const channel = await createChannel(alice, [bob])
+    const [fromBob] = await seedMessages(channel, bob, 1)
+
+    const response = await client
+      .patch(`/api/v1/channels/${channel.id}/messages/${fromBob}`)
+      .loginAs(alice)
+      .json({ content: 'changed' })
+
+    response.assertStatus(403)
+  })
+
+  test('a deleted message cannot be edited', async ({ client }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const [messageId] = await seedMessages(channel, alice, 1)
+    const url = `/api/v1/channels/${channel.id}/messages/${messageId}`
+
+    await client.delete(url).loginAs(alice)
+    const response = await client.patch(url).loginAs(alice).json({ content: 'changed' })
+
+    response.assertStatus(404)
+  })
+
+  test('an empty edit is rejected', async ({ client }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const [messageId] = await seedMessages(channel, alice, 1)
+
+    const response = await client
+      .patch(`/api/v1/channels/${channel.id}/messages/${messageId}`)
+      .loginAs(alice)
+      .json({ content: '  ' })
+
+    response.assertStatus(422)
   })
 })

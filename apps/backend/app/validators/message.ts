@@ -12,3 +12,5 @@ export const messageHistoryValidator = vine.create({
 export const sendMessageValidator = vine.create({
   content: vine.string().trim().minLength(1).maxLength(MAX_MESSAGE_LENGTH),
 })
+
+export const editMessageValidator = sendMessageValidator

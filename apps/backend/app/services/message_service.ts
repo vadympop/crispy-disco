@@ -82,17 +82,40 @@ export default class MessageService {
     return message
   }
 
+  async edit(user: User, channelId: string, messageId: string, content: string) {
+    const channel = await this.channelService.findOrFail(channelId)
+    await this.channelService.ensureMember(user, channel)
+
+    const message = await this.findVisible(channel, messageId)
+    if (message.authorId !== user.id) {
+      throw new Exception('You can only edit your own messages', {
+        status: 403,
+        code: 'E_NOT_MESSAGE_AUTHOR',
+      })
+    }
+
+    await db.transaction(async (trx) => {
+      channel.useTransaction(trx)
+      message.useTransaction(trx)
+
+      message.content = content
+      message.editedAt = DateTime.now()
+      await message.save()
+
+      const mentioned = await this.findMentionedMembers(channel, content)
+      await message.related('mentions').sync(mentioned, true, trx)
+    })
+
+    await message.load('author')
+    // TODO(realtime): emit message:updated to the channel room
+    return message
+  }
+
   async delete(user: User, channelId: string, messageId: string) {
     const channel = await this.channelService.findOrFail(channelId)
     await this.channelService.ensureMember(user, channel)
 
-    const message = await this.findInChannel(channel, messageId)
-    if (message.deletedAt) {
-      throw new Exception('That message does not exist in this channel', {
-        status: 404,
-        code: 'E_MESSAGE_NOT_FOUND',
-      })
-    }
+    const message = await this.findVisible(channel, messageId)
     if (message.authorId !== user.id && !this.channelService.isAdmin(user, channel)) {
       throw new Exception('You can only delete your own messages', {
         status: 403,
@@ -119,10 +142,20 @@ export default class MessageService {
     return message
   }
 
+  private async findVisible(channel: Channel, messageId: string) {
+    const message = await this.findInChannel(channel, messageId)
+    if (message.deletedAt) {
+      throw new Exception('That message does not exist in this channel', {
+        status: 404,
+        code: 'E_MESSAGE_NOT_FOUND',
+      })
+    }
+    return message
+  }
+
   private async findMentionedMembers(channel: Channel, content: string) {
     const nicknames = new Set<string>()
     for (const [, nickname] of content.matchAll(MENTION_PATTERN)) {
-      // the pattern always captures, but the frontend's strict config doesn't know that
       if (!nickname) continue
       nicknames.add(nickname)
       nicknames.add(nickname.replace(/\.+$/, ''))

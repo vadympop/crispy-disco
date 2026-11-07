@@ -199,6 +199,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/messages_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'messages.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/channels/:id/messages/:messageId'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/message').editMessageValidator)>>
+      paramsTuple: [ParamValue, ParamValue]
+      params: { id: ParamValue; messageId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/message').editMessageValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/messages_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/messages_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'messages.destroy': {
     methods: ["DELETE"]
     pattern: '/api/v1/channels/:id/messages/:messageId'

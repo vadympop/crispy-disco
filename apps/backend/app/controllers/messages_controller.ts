@@ -2,7 +2,11 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import MessageService from '#services/message_service'
 import MessageTransformer from '#transformers/message_transformer'
-import { messageHistoryValidator, sendMessageValidator } from '#validators/message'
+import {
+  editMessageValidator,
+  messageHistoryValidator,
+  sendMessageValidator,
+} from '#validators/message'
 
 @inject()
 export default class MessagesController {
@@ -24,6 +28,17 @@ export default class MessagesController {
     const message = await this.messageService.send(auth.getUserOrFail(), params.id, content)
 
     response.status(201)
+    return serialize(MessageTransformer.transform(message))
+  }
+
+  async update({ auth, params, request, serialize }: HttpContext) {
+    const { content } = await request.validateUsing(editMessageValidator)
+    const message = await this.messageService.edit(
+      auth.getUserOrFail(),
+      params.id,
+      params.messageId,
+      content
+    )
     return serialize(MessageTransformer.transform(message))
   }
 
