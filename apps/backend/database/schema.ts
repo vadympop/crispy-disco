@@ -91,7 +91,7 @@ export class MessageMentionSchema extends BaseModel {
 }
 
 export class MessageSchema extends BaseModel {
-  static $columns = ['authorId', 'channelId', 'content', 'createdAt', 'deletedAt', 'id', 'parentMessageId', 'updatedAt'] as const
+  static $columns = ['authorId', 'channelId', 'content', 'createdAt', 'deletedAt', 'editedAt', 'id', 'parentMessageId', 'updatedAt'] as const
   $columns = MessageSchema.$columns
   @column()
   declare authorId: string
@@ -103,6 +103,8 @@ export class MessageSchema extends BaseModel {
   declare createdAt: DateTime | null
   @column.dateTime()
   declare deletedAt: DateTime | null
+  @column.dateTime()
+  declare editedAt: DateTime | null
   @column({ isPrimary: true })
   declare id: string
   @column()

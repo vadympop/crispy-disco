@@ -46,6 +46,14 @@ router
         router.post(':id/invite', [controllers.Channels, 'invite'])
         router.post(':id/revoke', [controllers.Channels, 'revoke'])
         router.post(':id/kick', [controllers.Channels, 'kick'])
+        router.get(':id/messages', [controllers.Messages, 'index'])
+        router.post(':id/messages', [controllers.Messages, 'store'])
+        router
+          .patch(':id/messages/:messageId', [controllers.Messages, 'update'])
+          .where('messageId', router.matchers.uuid())
+        router
+          .delete(':id/messages/:messageId', [controllers.Messages, 'destroy'])
+          .where('messageId', router.matchers.uuid())
         router.delete(':id', [controllers.Channels, 'destroy'])
       })
       .where('id', router.matchers.uuid())

@@ -90,6 +90,30 @@ const routes = {
     tokens: [{"old":"/api/v1/channels/:id/kick","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/kick","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/kick","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/kick","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/kick","type":0,"val":"kick","end":""}],
     types: placeholder as Registry['channels.kick']['types'],
   },
+  'messages.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/channels/:id/messages',
+    tokens: [{"old":"/api/v1/channels/:id/messages","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"messages","end":""}],
+    types: placeholder as Registry['messages.index']['types'],
+  },
+  'messages.store': {
+    methods: ["POST"],
+    pattern: '/api/v1/channels/:id/messages',
+    tokens: [{"old":"/api/v1/channels/:id/messages","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages","type":0,"val":"messages","end":""}],
+    types: placeholder as Registry['messages.store']['types'],
+  },
+  'messages.update': {
+    methods: ["PATCH"],
+    pattern: '/api/v1/channels/:id/messages/:messageId',
+    tokens: [{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"messages","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":1,"val":"messageId","end":""}],
+    types: placeholder as Registry['messages.update']['types'],
+  },
+  'messages.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/channels/:id/messages/:messageId',
+    tokens: [{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"messages","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":1,"val":"messageId","end":""}],
+    types: placeholder as Registry['messages.destroy']['types'],
+  },
   'channels.destroy': {
     methods: ["DELETE"],
     pattern: '/api/v1/channels/:id',
