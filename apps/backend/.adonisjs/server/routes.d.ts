@@ -15,6 +15,9 @@ export type ScannedRoutes = {
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.invite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.revoke': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.kick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
@@ -40,6 +43,9 @@ export type ScannedRoutes = {
     'channels.direct': { paramsTuple?: []; params?: {} }
     'channels.cancel': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'channels.decline': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.invite': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.revoke': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'channels.kick': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   DELETE: {
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

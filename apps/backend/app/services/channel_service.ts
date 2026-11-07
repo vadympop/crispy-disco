@@ -2,10 +2,14 @@ import { createHash } from 'node:crypto'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import { Exception } from '@adonisjs/core/exceptions'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import Channel from '#models/channel'
+import KickVote from '#models/kick_vote'
 import User from '#models/user'
 
 export const CHANNEL_EXPIRY_DAYS = 30
+// kick votes from different members that ban a user in a public channel
+export const KICKS_TO_BAN = 3
 
 type MemberStatus = 'member' | 'invited' | 'banned'
 
@@ -189,6 +193,188 @@ export default class ChannelService {
     await channel.related('members').detach([user.id])
   }
 
+  /**
+   * /invite nickname. In a private channel only the admin can invite, in a
+   * public one any member. The admin can also invite a banned user, which
+   * lifts the ban and clears the old kick votes.
+   */
+  async invite(user: User, channelId: string, nickname: string) {
+    return db.transaction(async (trx) => {
+      const channel = await this.lockOrFail(channelId, trx)
+      await this.ensureMember(user, channel)
+
+      if (channel.isDirect) {
+        throw new Exception("You can't invite anyone to a direct chat", {
+          status: 422,
+          code: 'E_DIRECT_CHANNEL',
+        })
+      }
+
+      const isAdmin = this.isAdmin(user, channel)
+      if (channel.type === 'private' && !isAdmin) {
+        throw new Exception('Only the admin can invite to a private channel', {
+          status: 403,
+          code: 'E_NOT_CHANNEL_ADMIN',
+        })
+      }
+
+      const target = await this.findUserByNickname(nickname, trx)
+      const status = await this.statusOf(target, channel)
+
+      if (status === 'member') {
+        throw new Exception(`${target.nickname} is already in #${channel.name}`, {
+          status: 409,
+          code: 'E_ALREADY_MEMBER',
+        })
+      }
+      if (status === 'invited') {
+        throw new Exception(`${target.nickname} is already invited to #${channel.name}`, {
+          status: 409,
+          code: 'E_ALREADY_INVITED',
+        })
+      }
+
+      if (status === 'banned') {
+        if (!isAdmin) {
+          throw new Exception(`${target.nickname} is banned, only the admin can invite them`, {
+            status: 403,
+            code: 'E_USER_BANNED',
+          })
+        }
+        await this.setStatus(target, channel, 'invited')
+        // start from zero, so 3 new votes are needed for the next ban
+        await KickVote.query({ client: trx })
+          .where('channel_id', channel.id)
+          .where('target_id', target.id)
+          .delete()
+        // TODO(realtime): emit channel:invited to the target
+        return { status: 'invited' as const, unbanned: true }
+      }
+
+      await channel.related('members').attach({ [target.id]: { status: 'invited' } }, trx)
+      // TODO(realtime): emit channel:invited to the target
+      return { status: 'invited' as const, unbanned: false }
+    })
+  }
+
+  /**
+   * /revoke nickname: the admin of a private channel removes a member or
+   * takes back an invite
+   */
+  async revoke(user: User, channelId: string, nickname: string) {
+    await db.transaction(async (trx) => {
+      const channel = await this.lockOrFail(channelId, trx)
+
+      if (channel.type !== 'private') {
+        throw new Exception('/revoke works only in private channels, use /kick', {
+          status: 422,
+          code: 'E_NOT_PRIVATE_CHANNEL',
+        })
+      }
+      if (!this.isAdmin(user, channel)) {
+        throw new Exception('Only the admin can revoke access', {
+          status: 403,
+          code: 'E_NOT_CHANNEL_ADMIN',
+        })
+      }
+
+      const target = await this.findUserByNickname(nickname, trx)
+      if (target.id === user.id) {
+        throw new Exception("You can't revoke yourself, use /quit", {
+          status: 422,
+          code: 'E_TARGET_SELF',
+        })
+      }
+
+      const status = await this.statusOf(target, channel)
+      if (status !== 'member' && status !== 'invited') {
+        throw new Exception(`${target.nickname} is not in #${channel.name}`, {
+          status: 404,
+          code: 'E_NOT_A_MEMBER',
+        })
+      }
+
+      await channel.related('members').detach([target.id], trx)
+      // TODO(realtime): emit channel:removed to the target
+    })
+  }
+
+  /**
+   * /kick nickname in a public channel. A kick from the admin bans the user
+   * right away. A kick from a member is a vote, and the user is banned once
+   * KICKS_TO_BAN different members voted. The banned row stays, so /join
+   * keeps refusing them until the admin invites them again.
+   */
+  async kick(user: User, channelId: string, nickname: string) {
+    return db.transaction(async (trx) => {
+      const channel = await this.lockOrFail(channelId, trx)
+
+      if (channel.type !== 'public') {
+        throw new Exception('/kick works only in public channels, use /revoke', {
+          status: 422,
+          code: 'E_NOT_PUBLIC_CHANNEL',
+        })
+      }
+      await this.ensureMember(user, channel)
+
+      const target = await this.findUserByNickname(nickname, trx)
+      if (target.id === user.id) {
+        throw new Exception("You can't kick yourself, use /cancel", {
+          status: 422,
+          code: 'E_TARGET_SELF',
+        })
+      }
+      if (this.isAdmin(target, channel)) {
+        throw new Exception("You can't kick the admin", {
+          status: 403,
+          code: 'E_TARGET_ADMIN',
+        })
+      }
+      if ((await this.statusOf(target, channel)) !== 'member') {
+        throw new Exception(`${target.nickname} is not in #${channel.name}`, {
+          status: 404,
+          code: 'E_NOT_A_MEMBER',
+        })
+      }
+
+      if (this.isAdmin(user, channel)) {
+        await this.setStatus(target, channel, 'banned')
+        // TODO(realtime): emit channel:removed to the target
+        return {
+          banned: true,
+          votes: await this.countKickVotes(channel, target, trx),
+          required: KICKS_TO_BAN,
+        }
+      }
+
+      const alreadyVoted = await KickVote.query({ client: trx })
+        .where('channel_id', channel.id)
+        .where('target_id', target.id)
+        .where('voter_id', user.id)
+        .first()
+      if (alreadyVoted) {
+        throw new Exception(`You already voted to kick ${target.nickname}`, {
+          status: 409,
+          code: 'E_ALREADY_VOTED',
+        })
+      }
+
+      await KickVote.create(
+        { channelId: channel.id, targetId: target.id, voterId: user.id },
+        { client: trx }
+      )
+
+      const votes = await this.countKickVotes(channel, target, trx)
+      const banned = votes >= KICKS_TO_BAN
+      if (banned) {
+        await this.setStatus(target, channel, 'banned')
+        // TODO(realtime): emit channel:removed to the target
+      }
+
+      return { banned, votes, required: KICKS_TO_BAN }
+    })
+  }
+
   async touch(channel: Channel) {
     channel.lastActivityAt = DateTime.now()
     await channel.save()
@@ -232,6 +418,49 @@ export default class ChannelService {
       })
     }
     return channel
+  }
+
+  // Locks the channel row until the transaction ends, so two moderation
+  // commands on the same channel can't interleave
+  private async lockOrFail(channelId: string, trx: TransactionClientContract) {
+    const channel = await Channel.query({ client: trx }).where('id', channelId).forUpdate().first()
+    if (!channel) {
+      throw new Exception('That channel does not exist', {
+        status: 404,
+        code: 'E_CHANNEL_NOT_FOUND',
+      })
+    }
+    return channel
+  }
+
+  private async ensureMember(user: User, channel: Channel) {
+    if ((await this.statusOf(user, channel)) !== 'member') {
+      throw new Exception(`You are not a member of #${channel.name}`, {
+        status: 403,
+        code: 'E_NOT_A_MEMBER',
+      })
+    }
+  }
+
+  // Commands take the nickname the user typed, the server resolves it
+  private async findUserByNickname(nickname: string, trx: TransactionClientContract) {
+    const user = await User.query({ client: trx }).where('nickname', nickname).first()
+    if (!user) {
+      throw new Exception(`There is no user called ${nickname}`, {
+        status: 404,
+        code: 'E_USER_NOT_FOUND',
+      })
+    }
+    return user
+  }
+
+  private async countKickVotes(channel: Channel, target: User, trx: TransactionClientContract) {
+    const rows = await KickVote.query({ client: trx })
+      .where('channel_id', channel.id)
+      .where('target_id', target.id)
+      .count('* as total')
+    // PostgreSQL returns the count as a string
+    return Number(rows[0]?.$extras.total ?? 0)
   }
 
   private async findForUser(user: User, channelId: string) {

@@ -3,7 +3,11 @@ import type { HttpContext } from '@adonisjs/core/http'
 import ChannelService from '#services/channel_service'
 import ChannelTransformer from '#transformers/channel_transformer'
 import PublicProfileTransformer from '#transformers/public_profile_transformer'
-import { joinChannelValidator, startDirectValidator } from '#validators/channel'
+import {
+  joinChannelValidator,
+  moderationTargetValidator,
+  startDirectValidator,
+} from '#validators/channel'
 
 @inject()
 export default class ChannelsController {
@@ -57,5 +61,21 @@ export default class ChannelsController {
   async decline({ auth, params, response }: HttpContext) {
     await this.channelService.decline(auth.getUserOrFail(), params.id)
     return response.noContent()
+  }
+
+  async invite({ auth, params, request, serialize }: HttpContext) {
+    const { nickname } = await request.validateUsing(moderationTargetValidator)
+    return serialize(await this.channelService.invite(auth.getUserOrFail(), params.id, nickname))
+  }
+
+  async revoke({ auth, params, request, response }: HttpContext) {
+    const { nickname } = await request.validateUsing(moderationTargetValidator)
+    await this.channelService.revoke(auth.getUserOrFail(), params.id, nickname)
+    return response.noContent()
+  }
+
+  async kick({ auth, params, request, serialize }: HttpContext) {
+    const { nickname } = await request.validateUsing(moderationTargetValidator)
+    return serialize(await this.channelService.kick(auth.getUserOrFail(), params.id, nickname))
   }
 }
