@@ -6,7 +6,8 @@
   "license": "MIT",
   "exports": {
     "./data": "./.adonisjs/client/data.d.ts",
-    "./registry": "./.adonisjs/client/registry/index.ts"
+    "./registry": "./.adonisjs/client/registry/index.ts",
+    "./realtime": "./app/services/realtime_service.ts"
   },
   "scripts": {
     "start": "node bin/server.js",
@@ -69,7 +70,8 @@
     "better-sqlite3": "^13.0.3",
     "luxon": "^3.7.2",
     "pg": "^8.23.1",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "socket.io": "4.8.1"
   },
   "hotHook": {
     "boundaries": [

@@ -6,6 +6,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import Channel from '#models/channel'
 import KickVote from '#models/kick_vote'
 import User from '#models/user'
+import realtime from '#services/realtime_service'
 
 export const CHANNEL_EXPIRY_DAYS = 30
 // kick votes from different members that ban a user in a public channel
@@ -40,10 +41,10 @@ export default class ChannelService {
     }
 
     const name = directChannelName(user.id, partner.id)
-    const channelId = await db.transaction(async (trx) => {
+    const { channelId, created } = await db.transaction(async (trx) => {
       const existing = await Channel.query({ client: trx }).where('name', name).forUpdate().first()
       if (existing) {
-        return existing.id
+        return { channelId: existing.id, created: false }
       }
 
       const channel = await Channel.create(
@@ -58,9 +59,13 @@ export default class ChannelService {
       await channel
         .related('members')
         .attach({ [user.id]: { status: 'member' }, [partner.id]: { status: 'member' } }, trx)
-      return channel.id
+      return { channelId: channel.id, created: true }
     })
 
+    if (created) {
+      realtime.joinChannel(user.id, channelId)
+      await realtime.channelAdded(partner.id, await this.findOne(partner, channelId))
+    }
     return this.findForUser(user, channelId)
   }
 
@@ -106,6 +111,7 @@ export default class ChannelService {
       return { channelId: channel.id, created: false }
     })
 
+    realtime.joinChannel(user.id, channelId)
     return { channel: await this.findForUser(user, channelId), created }
   }
 
@@ -156,10 +162,12 @@ export default class ChannelService {
     // leaving direct chat deletes it
     if (this.isAdmin(user, channel) || channel.isDirect) {
       await channel.delete()
+      realtime.channelDeleted(channel.id)
       return { channelDeleted: true }
     }
 
     await channel.related('members').detach([user.id])
+    realtime.leaveChannel(user.id, channel.id)
     return { channelDeleted: false }
   }
 
@@ -177,6 +185,7 @@ export default class ChannelService {
     }
 
     await channel.delete()
+    realtime.channelDeleted(channel.id)
   }
 
   async decline(user: User, channelId: string) {
@@ -199,7 +208,7 @@ export default class ChannelService {
    * lifts the ban and clears the old kick votes.
    */
   async invite(user: User, channelId: string, nickname: string) {
-    return db.transaction(async (trx) => {
+    const { target: invited, ...result } = await db.transaction(async (trx) => {
       const channel = await this.lockOrFail(channelId, trx)
       await this.ensureMember(user, channel)
 
@@ -247,14 +256,15 @@ export default class ChannelService {
           .where('channel_id', channel.id)
           .where('target_id', target.id)
           .delete()
-        // TODO(realtime): emit channel:invited to the target
-        return { status: 'invited' as const, unbanned: true }
+        return { target, status: 'invited' as const, unbanned: true }
       }
 
       await channel.related('members').attach({ [target.id]: { status: 'invited' } }, trx)
-      // TODO(realtime): emit channel:invited to the target
-      return { status: 'invited' as const, unbanned: false }
+      return { target, status: 'invited' as const, unbanned: false }
     })
+
+    await realtime.channelInvited(invited.id, await this.findOne(invited, channelId))
+    return result
   }
 
   /**
@@ -262,7 +272,7 @@ export default class ChannelService {
    * takes back an invite
    */
   async revoke(user: User, channelId: string, nickname: string) {
-    await db.transaction(async (trx) => {
+    const targetId = await db.transaction(async (trx) => {
       const channel = await this.lockOrFail(channelId, trx)
 
       if (channel.type !== 'private') {
@@ -295,8 +305,10 @@ export default class ChannelService {
       }
 
       await channel.related('members').detach([target.id], trx)
-      // TODO(realtime): emit channel:removed to the target
+      return target.id
     })
+
+    realtime.channelRemoved(targetId, channelId, 'revoked')
   }
 
   /**
@@ -306,7 +318,7 @@ export default class ChannelService {
    * keeps refusing them until the admin invites them again.
    */
   async kick(user: User, channelId: string, nickname: string) {
-    return db.transaction(async (trx) => {
+    const { targetId, ...result } = await db.transaction(async (trx) => {
       const channel = await this.lockOrFail(channelId, trx)
 
       if (channel.type !== 'public') {
@@ -339,8 +351,8 @@ export default class ChannelService {
 
       if (this.isAdmin(user, channel)) {
         await this.setStatus(target, channel, 'banned')
-        // TODO(realtime): emit channel:removed to the target
         return {
+          targetId: target.id,
           banned: true,
           votes: await this.countKickVotes(channel, target, trx),
           required: KICKS_TO_BAN,
@@ -368,11 +380,15 @@ export default class ChannelService {
       const banned = votes >= KICKS_TO_BAN
       if (banned) {
         await this.setStatus(target, channel, 'banned')
-        // TODO(realtime): emit channel:removed to the target
       }
 
-      return { banned, votes, required: KICKS_TO_BAN }
+      return { targetId: target.id, banned, votes, required: KICKS_TO_BAN }
     })
+
+    if (result.banned) {
+      realtime.channelRemoved(targetId, channelId, 'banned')
+    }
+    return result
   }
 
   async touch(channel: Channel) {
@@ -402,6 +418,9 @@ export default class ChannelService {
       )
       .delete()
 
+    for (const channel of expired) {
+      realtime.channelDeleted(channel.id)
+    }
     return expired.map((channel) => channel.name)
   }
 
