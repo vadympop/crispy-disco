@@ -8,6 +8,8 @@ import KickVote from '#models/kick_vote'
 import User from '#models/user'
 
 export const CHANNEL_EXPIRY_DAYS = 30
+// kick votes from different members that ban a user in a public channel
+export const KICKS_TO_BAN = 3
 
 type MemberStatus = 'member' | 'invited' | 'banned'
 
@@ -297,6 +299,82 @@ export default class ChannelService {
     })
   }
 
+  /**
+   * /kick nickname in a public channel. A kick from the admin bans the user
+   * right away. A kick from a member is a vote, and the user is banned once
+   * KICKS_TO_BAN different members voted. The banned row stays, so /join
+   * keeps refusing them until the admin invites them again.
+   */
+  async kick(user: User, channelId: string, nickname: string) {
+    return db.transaction(async (trx) => {
+      const channel = await this.lockOrFail(channelId, trx)
+
+      if (channel.type !== 'public') {
+        throw new Exception('/kick works only in public channels, use /revoke', {
+          status: 422,
+          code: 'E_NOT_PUBLIC_CHANNEL',
+        })
+      }
+      await this.ensureMember(user, channel)
+
+      const target = await this.findUserByNickname(nickname, trx)
+      if (target.id === user.id) {
+        throw new Exception("You can't kick yourself, use /cancel", {
+          status: 422,
+          code: 'E_TARGET_SELF',
+        })
+      }
+      if (this.isAdmin(target, channel)) {
+        throw new Exception("You can't kick the admin", {
+          status: 403,
+          code: 'E_TARGET_ADMIN',
+        })
+      }
+      if ((await this.statusOf(target, channel)) !== 'member') {
+        throw new Exception(`${target.nickname} is not in #${channel.name}`, {
+          status: 404,
+          code: 'E_NOT_A_MEMBER',
+        })
+      }
+
+      if (this.isAdmin(user, channel)) {
+        await this.setStatus(target, channel, 'banned')
+        // TODO(realtime): emit channel:removed to the target
+        return {
+          banned: true,
+          votes: await this.countKickVotes(channel, target, trx),
+          required: KICKS_TO_BAN,
+        }
+      }
+
+      const alreadyVoted = await KickVote.query({ client: trx })
+        .where('channel_id', channel.id)
+        .where('target_id', target.id)
+        .where('voter_id', user.id)
+        .first()
+      if (alreadyVoted) {
+        throw new Exception(`You already voted to kick ${target.nickname}`, {
+          status: 409,
+          code: 'E_ALREADY_VOTED',
+        })
+      }
+
+      await KickVote.create(
+        { channelId: channel.id, targetId: target.id, voterId: user.id },
+        { client: trx }
+      )
+
+      const votes = await this.countKickVotes(channel, target, trx)
+      const banned = votes >= KICKS_TO_BAN
+      if (banned) {
+        await this.setStatus(target, channel, 'banned')
+        // TODO(realtime): emit channel:removed to the target
+      }
+
+      return { banned, votes, required: KICKS_TO_BAN }
+    })
+  }
+
   async touch(channel: Channel) {
     channel.lastActivityAt = DateTime.now()
     await channel.save()
@@ -374,6 +452,15 @@ export default class ChannelService {
       })
     }
     return user
+  }
+
+  private async countKickVotes(channel: Channel, target: User, trx: TransactionClientContract) {
+    const rows = await KickVote.query({ client: trx })
+      .where('channel_id', channel.id)
+      .where('target_id', target.id)
+      .count('* as total')
+    // PostgreSQL returns the count as a string
+    return Number(rows[0]?.$extras.total ?? 0)
   }
 
   private async findForUser(user: User, channelId: string) {
