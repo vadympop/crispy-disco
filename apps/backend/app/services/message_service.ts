@@ -40,10 +40,16 @@ export default class MessageService {
         })
       }
 
+      // Lucid formats dates only when it saves a model, a raw Date would reach
+      // the driver as is (SQLite binds it as a number and the text comparison
+      // always fails), so format it the way the column was written
+      const createdAt = DateTime.fromJSDate(position.createdAt).toFormat(
+        query.client.dialect.dateTimeFormat
+      )
       const op = forward ? '>' : '<'
       query.where((q) => {
-        q.where('created_at', op, position.createdAt).orWhere((tie) => {
-          tie.where('created_at', position.createdAt).where('id', op, position.id)
+        q.where('created_at', op, createdAt).orWhere((tie) => {
+          tie.where('created_at', createdAt).where('id', op, position.id)
         })
       })
     }
