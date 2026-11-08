@@ -47,15 +47,15 @@
       <q-card-section v-if="stats.sharedChannels.length > 0" class="q-pt-sm">
         <div class="row q-gutter-xs">
           <q-chip
-            v-for="name in stats.sharedChannels"
-            :key="name"
+            v-for="channel in stats.sharedChannels"
+            :key="channel.id"
             v-close-popup
             dense
             clickable
             icon="tag"
             class="channel-chip"
-            :label="name"
-            @click="openChannel(name)"
+            :label="channel.name"
+            @click="openChannel(channel.name)"
           />
         </div>
       </q-card-section>
@@ -118,22 +118,32 @@ const user = computed(() => {
   return chat.findUser(props.nickName);
 });
 
-// reload on every open, so the status is current
+// also known when the menu was opened on my own nick
+const userId = computed(
+  () => props.userId ?? (isMe.value ? auth.userId : undefined)
+);
+
+// reload on every open, so the status and the stats are current
 async function loadProfile() {
-  if (props.userId && !isMe.value) {
-    await users.fetchProfile(props.userId);
+  const id = userId.value;
+  if (!id) {
+    return;
   }
+  await Promise.all([
+    users.fetchStats(id),
+    isMe.value ? undefined : users.fetchProfile(id)
+  ]);
 }
 
 const fullName = computed(() =>
   user.value ? `${user.value.firstName} ${user.value.lastName}` : props.nickName
 );
 const status = computed(() => statusOption(user.value?.status ?? "offline"));
-const stats = computed(() =>
-  user.value
-    ? chat.userStats(user.value)
-    : { messageCount: 0, sharedChannels: [] }
-);
+// zeros until the first load finishes
+const stats = computed(() => {
+  const loaded = userId.value ? users.stats[userId.value] : undefined;
+  return loaded ?? { messageCount: 0, sharedChannels: [] };
+});
 
 async function openChannel(name: string) {
   emit("navigated");

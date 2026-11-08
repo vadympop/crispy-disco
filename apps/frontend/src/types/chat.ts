@@ -22,12 +22,6 @@ export interface Channel {
   directWith?: string;
 }
 
-export interface UserStats {
-  messageCount: number;
-  // regular channels (not direct chats) both of us are in
-  sharedChannels: string[];
-}
-
 export interface Message {
   id: number;
   channel: string;

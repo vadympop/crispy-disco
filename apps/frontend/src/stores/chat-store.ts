@@ -1,7 +1,7 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
-import type { Message, TypingDraft, UserStats } from "@/types/chat";
+import type { Message, TypingDraft } from "@/types/chat";
 import type { Channel, PublicProfile, User } from "@/types/api";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
@@ -236,29 +236,6 @@ export const useChatStore = defineStore("chat", () => {
     });
     upsertChannel(result.data);
     return result.data.name;
-  }
-
-  function userStats(user: Pick<User, "id" | "nickname">): UserStats {
-    // TODO: mock messages only know the author's nick
-    let messageCount = 0;
-    for (const history of Object.values(serverHistory)) {
-      messageCount += history.filter(
-        m => m.authorNick === user.nickname
-      ).length;
-    }
-
-    const myId = auth.userId ?? "";
-    const sharedChannels = channels.value
-      .filter(
-        c =>
-          !c.invited &&
-          !c.isDirect &&
-          members.value[c.name]?.includes(user.id) &&
-          members.value[c.name]?.includes(myId)
-      )
-      .map(c => c.name);
-
-    return { messageCount, sharedChannels };
   }
 
   function removeChannel(name: string) {
@@ -550,7 +527,6 @@ export const useChatStore = defineStore("chat", () => {
     deleteChannel,
     acceptInvite,
     startDirectChat,
-    userStats,
     declineInvite,
     renameNick,
     runCommand,
