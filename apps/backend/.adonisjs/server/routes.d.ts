@@ -24,6 +24,7 @@ export type ScannedRoutes = {
     'messages.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'users.stats': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   GET: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
@@ -32,6 +33,7 @@ export type ScannedRoutes = {
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'messages.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'users.stats': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
     'profile.profile.show': { paramsTuple?: []; params?: {} }
@@ -40,6 +42,7 @@ export type ScannedRoutes = {
     'channels.members': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'messages.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'users.stats': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }

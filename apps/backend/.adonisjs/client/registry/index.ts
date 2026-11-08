@@ -126,6 +126,12 @@ const routes = {
     tokens: [{"old":"/api/v1/users/:id","type":0,"val":"api","end":""},{"old":"/api/v1/users/:id","type":0,"val":"v1","end":""},{"old":"/api/v1/users/:id","type":0,"val":"users","end":""},{"old":"/api/v1/users/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['users.show']['types'],
   },
+  'users.stats': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/users/:id/stats',
+    tokens: [{"old":"/api/v1/users/:id/stats","type":0,"val":"api","end":""},{"old":"/api/v1/users/:id/stats","type":0,"val":"v1","end":""},{"old":"/api/v1/users/:id/stats","type":0,"val":"users","end":""},{"old":"/api/v1/users/:id/stats","type":1,"val":"id","end":""},{"old":"/api/v1/users/:id/stats","type":0,"val":"stats","end":""}],
+    types: placeholder as Registry['users.stats']['types'],
+  },
 } as const satisfies Record<string, AdonisEndpoint>
 
 export { routes }

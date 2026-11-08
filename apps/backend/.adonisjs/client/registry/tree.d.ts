@@ -39,5 +39,6 @@ export interface ApiDefinition {
   }
   users: {
     show: typeof routes['users.show']
+    stats: typeof routes['users.stats']
   }
 }
