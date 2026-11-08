@@ -111,11 +111,7 @@ const user = computed(() => {
   if (isMe.value) {
     return auth.me;
   }
-  if (props.userId) {
-    return users.profiles[props.userId];
-  }
-  // TODO: message authors only have a nick until messages come from the API
-  return chat.findUser(props.nickName);
+  return props.userId ? users.profiles[props.userId] : undefined;
 });
 
 // also known when the menu was opened on my own nick

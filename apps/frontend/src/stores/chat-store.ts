@@ -1,33 +1,21 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
-import type { Message, TypingDraft } from "@/types/chat";
-import type { Channel, PublicProfile, User } from "@/types/api";
+import type { TypingDraft } from "@/types/chat";
+import type { Channel, Message, PublicProfile, User } from "@/types/api";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
-import {
-  generateHistory,
-  mockChannels,
-  mockMembers,
-  mockOtherChannels,
-  mockUsers
-} from "@/mocks/chat";
+import { mockMembers, mockUsers } from "@/mocks/chat";
 
-const PAGE_SIZE = 20;
+// messages per history request (the infinite scroll loads one page at a time)
+const PAGE_SIZE = 30;
 const KICKS_TO_BAN = 3;
 
 // What the UI should do after a command ran
 export interface CommandResult {
   navigateTo?: string;
   showMembers?: boolean;
-}
-
-// Stand-in for the server: the full history of every channel, oldest first.
-// The store only "downloads" PAGE_SIZE messages from it at a time.
-const serverHistory: Record<string, Message[]> = {};
-for (const channel of [...mockChannels, ...mockOtherChannels]) {
-  serverHistory[channel.name] = generateHistory(channel.name, 120);
 }
 
 // TODO: temporary, the mocks list members by nick
@@ -71,9 +59,8 @@ export const useChatStore = defineStore("chat", () => {
   const notifyMentionsOnly = ref(false);
   const typing = ref<TypingDraft[]>([]);
 
+  // channel id -> the loaded part of its history, oldest first
   const messagesByChannel = ref<Record<string, Message[]>>({});
-  // index in serverHistory of the oldest message already loaded
-  const historyCursor: Record<string, number> = {};
 
   // Invited channels are pinned to the top, the rest by latest activity
   const sortedChannels = computed(() =>
@@ -155,44 +142,65 @@ export const useChatStore = defineStore("chat", () => {
     return result.data;
   }
 
-  // Loads the next page of older messages. Returns false when there are no more.
-  function loadOlder(channelName: string): boolean {
-    const history = serverHistory[channelName] ?? [];
-    const cursor = historyCursor[channelName] ?? history.length;
-    const start = Math.max(0, cursor - PAGE_SIZE);
-
-    const older = history.slice(start, cursor);
-    const loaded = messagesByChannel.value[channelName] ?? [];
-    messagesByChannel.value[channelName] = [...older, ...loaded];
-    historyCursor[channelName] = start;
-
-    return start > 0;
+  // The loaded messages of a channel, oldest first
+  function messagesOf(channelName: string): Message[] {
+    const channel = findChannel(channelName);
+    return channel ? (messagesByChannel.value[channel.id] ?? []) : [];
   }
 
-  function sendMessage(channelName: string, text: string) {
-    const myNick = auth.nickname;
-    if (!myNick) {
+  // Loads the page before the oldest loaded message, or the newest page
+  // the first time. Returns false when the channel has no older messages.
+  async function loadOlder(channelName: string): Promise<boolean> {
+    const channel = findChannel(channelName);
+    if (!channel) {
+      return false;
+    }
+    const before = messagesOf(channelName)[0]?.cursor ?? undefined;
+
+    const result = await client.api.messages.index({
+      params: { id: channel.id },
+      query: { before, limit: PAGE_SIZE }
+    });
+    const { messages, hasMore } = result.data;
+
+    // read again after the request: the socket may have added a message,
+    // which can then also be on this page
+    const loaded = messagesByChannel.value[channel.id] ?? [];
+    const loadedIds = new Set(loaded.map(message => message.id));
+    messagesByChannel.value[channel.id] = [
+      ...messages.filter(message => !loadedIds.has(message.id)),
+      ...loaded
+    ];
+    return hasMore;
+  }
+
+  // Adds a new message at the end of its channel, once. Used for my own
+  // messages and for the ones that arrive over the socket.
+  function addMessage(message: Message) {
+    const loaded = messagesByChannel.value[message.channelId] ?? [];
+    if (loaded.some(m => m.id === message.id)) {
       return;
     }
+    messagesByChannel.value[message.channelId] = [...loaded, message];
+
+    const channel = channels.value.find(c => c.id === message.channelId);
+    if (channel && message.createdAt) {
+      channel.lastMessageAt = message.createdAt;
+    }
+  }
+
+  async function sendMessage(channelName: string, text: string) {
     const channel = findChannel(channelName);
     if (!channel || channel.invited) {
       notifyError("You can only post in channels you are a member of");
       return;
     }
 
-    const message: Message = {
-      id: Date.now(),
-      channel: channelName,
-      // TODO: mock messages only know the author's nick
-      authorNick: myNick,
-      text,
-      createdAt: new Date().toISOString()
-    };
-    const loaded = messagesByChannel.value[channelName] ?? [];
-    messagesByChannel.value[channelName] = [...loaded, message];
-    // the fake server keeps it too, so it counts in the user stats
-    (serverHistory[channelName] ??= []).push(message);
-    channel.lastMessageAt = message.createdAt;
+    const result = await client.api.messages.store({
+      params: { id: channel.id },
+      body: { content: text }
+    });
+    addMessage(result.data);
   }
 
   // /join: joins a public channel, accepts an invite, or creates the channel.
@@ -244,9 +252,12 @@ export const useChatStore = defineStore("chat", () => {
 
   // Local cleanup once the user is no longer in the channel
   function forgetChannel(name: string) {
+    const channel = findChannel(name);
+    if (channel) {
+      delete messagesByChannel.value[channel.id];
+    }
     removeChannel(name);
     delete members.value[name];
-    delete messagesByChannel.value[name];
   }
 
   // /cancel: leave the channel. When the admin leaves, the server deletes it.
@@ -303,12 +314,9 @@ export const useChatStore = defineStore("chat", () => {
       user.nickname = rename(user.nickname);
     }
 
-    for (const list of [
-      ...Object.values(messagesByChannel.value),
-      ...Object.values(serverHistory)
-    ]) {
+    for (const list of Object.values(messagesByChannel.value)) {
       for (const message of list) {
-        message.authorNick = rename(message.authorNick);
+        message.author.nickname = rename(message.author.nickname);
       }
     }
   }
@@ -520,7 +528,9 @@ export const useChatStore = defineStore("chat", () => {
     channelLabel,
     isAdmin,
     fetchMembers,
+    messagesOf,
     loadOlder,
+    addMessage,
     sendMessage,
     joinChannel,
     leaveChannel,

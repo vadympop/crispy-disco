@@ -9,27 +9,6 @@ export interface User {
   avatarUrl?: string;
 }
 
-export interface Channel {
-  // database id; missing for mock channels and local direct chats
-  id?: string;
-  name: string;
-  isPrivate: boolean;
-  adminNick: string;
-  // true = the user was invited but hasn't accepted yet
-  invited: boolean;
-  lastMessageAt: string;
-  // set for a private 1-on-1 chat: the nick of the other person
-  directWith?: string;
-}
-
-export interface Message {
-  id: number;
-  channel: string;
-  authorNick: string;
-  text: string;
-  createdAt: string;
-}
-
 export interface TypingDraft {
   nickName: string;
   text: string;

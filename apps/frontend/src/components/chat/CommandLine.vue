@@ -185,7 +185,15 @@ async function submit() {
   text.value = "";
 
   if (!value.startsWith("/")) {
-    chat.sendMessage(props.channel!, value);
+    try {
+      await chat.sendMessage(props.channel!, value);
+    } catch (error) {
+      // give the text back unless something new was typed meanwhile
+      if (text.value === "") {
+        text.value = value;
+      }
+      throw error;
+    }
     return;
   }
 

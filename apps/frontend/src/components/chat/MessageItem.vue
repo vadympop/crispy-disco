@@ -3,15 +3,24 @@
     class="message row no-wrap q-px-md q-py-xs"
     :class="{ 'message-mention': mentionsMe }"
   >
-    <UserAvatar :nick-name="message.authorNick" class="author q-mr-sm q-mt-xs">
-      <UserProfileMenu :nick-name="message.authorNick" />
+    <UserAvatar
+      :nick-name="message.author.nickname"
+      class="author q-mr-sm q-mt-xs"
+    >
+      <UserProfileMenu
+        :nick-name="message.author.nickname"
+        :user-id="message.author.id"
+      />
     </UserAvatar>
 
     <div class="col" style="min-width: 0">
       <div class="row items-baseline q-gutter-x-sm">
         <span class="author author-nick text-weight-bold"
-          >{{ message.authorNick }}
-          <UserProfileMenu :nick-name="message.authorNick" />
+          >{{ message.author.nickname }}
+          <UserProfileMenu
+            :nick-name="message.author.nickname"
+            :user-id="message.author.id"
+          />
         </span>
         <span class="text-caption message-time">{{ time }}</span>
       </div>
@@ -38,7 +47,7 @@ import { computed } from "vue";
 import { date } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
-import type { Message } from "@/types/chat";
+import type { Message } from "@/types/api";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
 
@@ -49,12 +58,17 @@ const auth = useAuthStore();
 
 // "hi @ed !" -> ["hi ", "@ed", " !"]
 const parts = computed(() =>
-  props.message.text.split(/(@[\w.-]+)/).filter(part => part !== "")
+  props.message.content.split(/(@[\w.-]+)/).filter(part => part !== "")
 );
 
 const mentionsMe = computed(() => parts.value.includes(`@${auth.nickname}`));
 
-const time = computed(() => date.formatDate(props.message.createdAt, "HH:mm"));
+// the column is nullable, but the server always sets it
+const time = computed(() =>
+  props.message.createdAt
+    ? date.formatDate(props.message.createdAt, "HH:mm")
+    : ""
+);
 </script>
 
 <style scoped>
