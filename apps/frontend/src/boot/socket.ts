@@ -28,7 +28,13 @@ export default defineBoot(({ router }) => {
     }
   }
 
-  // The handlers are registered once, socket.io keeps them across reconnects
+  // The handlers are registered once, socket.io keeps them across reconnects.
+  // My own messages come back here too, addMessage adds each one only once.
+  socket.on("message:new", message => chat.addMessage(message));
+  socket.on("message:updated", message => chat.onMessageUpdated(message));
+  socket.on("message:deleted", ({ channelId, messageId }) =>
+    chat.onMessageDeleted(channelId, messageId)
+  );
   socket.on("channel:invited", channel => chat.onChannelInvited(channel));
   socket.on("channel:added", channel => chat.onChannelAdded(channel));
   socket.on("channel:removed", ({ channelId, reason }) =>

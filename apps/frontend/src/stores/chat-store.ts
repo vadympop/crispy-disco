@@ -158,6 +158,25 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
+  // message:updated, the author edited a message
+  function onMessageUpdated(message: Message) {
+    const loaded = messagesByChannel.value[message.channelId] ?? [];
+    const index = loaded.findIndex(m => m.id === message.id);
+    if (index !== -1) {
+      loaded[index] = message;
+    }
+  }
+
+  // message:deleted, the author or the admin deleted a message
+  function onMessageDeleted(channelId: string, messageId: string) {
+    const loaded = messagesByChannel.value[channelId];
+    if (loaded) {
+      messagesByChannel.value[channelId] = loaded.filter(
+        m => m.id !== messageId
+      );
+    }
+  }
+
   async function sendMessage(channelName: string, text: string) {
     const channel = findChannel(channelName);
     if (!channel || channel.invited) {
@@ -491,6 +510,8 @@ export const useChatStore = defineStore("chat", () => {
     messagesOf,
     loadOlder,
     addMessage,
+    onMessageUpdated,
+    onMessageDeleted,
     sendMessage,
     joinChannel,
     leaveChannel,
