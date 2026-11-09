@@ -149,8 +149,7 @@
 <script setup lang="ts">
 import { reactive, useTemplateRef } from "vue";
 import { Notify } from "quasar";
-import type { UserStatus } from "@/types/chat";
-import { STATUS_OPTIONS } from "@/lib/status";
+import { STATUS_OPTIONS, type UserStatus } from "@/lib/status";
 import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
@@ -242,16 +241,9 @@ async function toSquareAvatar(file: File): Promise<string> {
 function onSubmit() {
   const oldNick = auth.nickname;
   const newNick = form.nickName;
+  // TODO: the server checks that the nick is free once the profile is saved
+  // there (PATCH /account/profile), until then it is only renamed locally
   if (oldNick && newNick !== oldNick) {
-    // the user list still holds a mock copy of me, which doesn't count as taken
-    const owner = chat.findUser(newNick);
-    if (owner && owner.id !== auth.userId) {
-      Notify.create({
-        type: "negative",
-        message: `Nickname ${newNick} is already taken`
-      });
-      return;
-    }
     chat.renameNick(oldNick, newNick);
   }
 

@@ -1,4 +1,5 @@
-import type { UserStatus } from "@/types/chat";
+// The server keeps the status as a plain string, these are the valid ones
+export type UserStatus = "online" | "dnd" | "offline";
 
 export interface StatusOption {
   value: UserStatus;

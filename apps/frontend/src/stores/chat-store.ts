@@ -2,11 +2,10 @@ import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
 import type { TypingDraft } from "@/types/chat";
-import type { Channel, Message, PublicProfile, User } from "@/types/api";
+import type { Channel, Message, PublicProfile } from "@/types/api";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
-import { mockMembers, mockUsers } from "@/mocks/chat";
 
 // messages per history request (the infinite scroll loads one page at a time)
 const PAGE_SIZE = 30;
@@ -15,18 +14,6 @@ const PAGE_SIZE = 30;
 export interface CommandResult {
   navigateTo?: string;
   showMembers?: boolean;
-}
-
-// TODO: temporary, the mocks list members by nick
-function mockMembersToIds(): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
-  for (const [channel, nicks] of Object.entries(mockMembers)) {
-    result[channel] = nicks
-      .map(nick => mockUsers.find(user => user.nickName === nick))
-      .filter(user => user !== undefined)
-      .map(user => String(user.id));
-  }
-  return result;
 }
 
 function notifyError(message: string) {
@@ -39,19 +26,9 @@ function notifyInfo(message: string) {
 
 export const useChatStore = defineStore("chat", () => {
   const auth = useAuthStore();
-  // TODO: temporary, the mocks still use the old User shape until /users exists
-  const users = ref<User[]>(
-    mockUsers.map(user => ({
-      ...user,
-      id: String(user.id),
-      nickname: user.nickName
-    })) as unknown as User[]
-  );
   // Filled from the API by fetchChannels()
   const channels = ref<Channel[]>([]);
   const isLoadingChannels = ref(false);
-  // All three are keyed by channel name and hold user ids
-  const members = ref<Record<string, string[]>>(mockMembersToIds());
   const notifyMentionsOnly = ref(false);
   const typing = ref<TypingDraft[]>([]);
 
@@ -81,11 +58,6 @@ export const useChatStore = defineStore("chat", () => {
 
   function findChannel(name: string) {
     return channels.value.find(channel => channel.name === name);
-  }
-
-  // Nicks are what people type (commands, @mentions), ids are what we store
-  function findUser(nickName: string) {
-    return users.value.find(user => user.nickname === nickName);
   }
 
   // The other person in a direct chat; undefined for normal channels.
@@ -216,12 +188,6 @@ export const useChatStore = defineStore("chat", () => {
     const { channel, created } = result.data;
     upsertChannel(channel);
 
-    const myId = auth.userId;
-    const current = members.value[name] ?? [];
-    if (myId && !current.includes(myId)) {
-      members.value[name] = [...current, myId];
-    }
-
     if (created) {
       notifyInfo(
         `Created ${channel.isPrivate ? "private" : "public"} channel #${name}`
@@ -253,7 +219,6 @@ export const useChatStore = defineStore("chat", () => {
       delete messagesByChannel.value[channel.id];
     }
     removeChannel(name);
-    delete members.value[name];
   }
 
   // /cancel: leave the channel. When the admin leaves, the server deletes it.
@@ -301,14 +266,10 @@ export const useChatStore = defineStore("chat", () => {
     removeChannel(name);
   }
 
-  // Everything else uses ids, so only the places that still store
-  // a nick follow the rename. Old "@nick" mentions in texts stay as written.
+  // Everything else uses ids, so only the loaded message authors follow
+  // the rename. Old "@nick" mentions in texts stay as written.
   function renameNick(oldNick: string, newNick: string) {
     const rename = (nick: string) => (nick === oldNick ? newNick : nick);
-
-    for (const user of users.value) {
-      user.nickname = rename(user.nickname);
-    }
 
     for (const list of Object.values(messagesByChannel.value)) {
       for (const message of list) {
@@ -452,18 +413,23 @@ export const useChatStore = defineStore("chat", () => {
     };
   }
 
+  // Forgets everything of the previous user after logout
+  function reset() {
+    channels.value = [];
+    messagesByChannel.value = {};
+    typing.value = [];
+    notifyMentionsOnly.value = false;
+  }
+
   return {
-    users,
     channels,
     isLoadingChannels,
     fetchChannels,
-    members,
     notifyMentionsOnly,
     typing,
     messagesByChannel,
     sortedChannels,
     findChannel,
-    findUser,
     directPartner,
     channelTitle,
     channelLabel,
@@ -481,7 +447,8 @@ export const useChatStore = defineStore("chat", () => {
     declineInvite,
     renameNick,
     runCommand,
-    simulateTyping
+    simulateTyping,
+    reset
   };
 });
 
