@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { Notify } from "quasar";
 import type { TypingDraft } from "@/types/chat";
 import type { Channel, Message, PublicProfile } from "@/types/api";
+import type { RemovedReason } from "@cisco-disco/backend/realtime";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
@@ -212,13 +213,17 @@ export const useChatStore = defineStore("chat", () => {
     channels.value = channels.value.filter(channel => channel.name !== name);
   }
 
-  // Local cleanup once the user is no longer in the channel
-  function forgetChannel(name: string) {
+  // Local cleanup once the user is no longer in the channel. Returns false
+  // when it was already gone: after /quit the server also sends
+  // channel:deleted to me, and whichever comes first shows the notice.
+  function forgetChannel(name: string): boolean {
     const channel = findChannel(name);
-    if (channel) {
-      delete messagesByChannel.value[channel.id];
+    if (!channel) {
+      return false;
     }
+    delete messagesByChannel.value[channel.id];
     removeChannel(name);
+    return true;
   }
 
   // /cancel: leave the channel. When the admin leaves, the server deletes it.
@@ -233,8 +238,9 @@ export const useChatStore = defineStore("chat", () => {
     const { channelDeleted } = await client.api.channels.cancel({
       params: { id: channel.id }
     });
-    forgetChannel(name);
-    notifyInfo(channelDeleted ? `${label} was deleted` : `You left ${label}`);
+    if (forgetChannel(name)) {
+      notifyInfo(channelDeleted ? `${label} was deleted` : `You left ${label}`);
+    }
     return true;
   }
 
@@ -247,9 +253,56 @@ export const useChatStore = defineStore("chat", () => {
 
     const label = channelLabel(name);
     await client.api.channels.destroy({ params: { id: channel.id } });
-    forgetChannel(name);
-    notifyInfo(`${label} was deleted`);
+    if (forgetChannel(name)) {
+      notifyInfo(`${label} was deleted`);
+    }
     return true;
+  }
+
+  // Socket events: the server tells me about changes other people made.
+  // The ones that remove a channel return its name, so the caller can
+  // leave its page if it is open.
+
+  // channel:invited, shown highlighted at the top of the list
+  function onChannelInvited(channel: Channel) {
+    upsertChannel(channel);
+    notifyInfo(`You were invited to #${channel.name}`);
+  }
+
+  // channel:added, someone opened a direct chat with me
+  function onChannelAdded(channel: Channel) {
+    upsertChannel(channel);
+  }
+
+  // channel:removed, I was revoked (also an invite taken back) or banned
+  function onChannelRemoved(
+    channelId: string,
+    reason: RemovedReason
+  ): string | undefined {
+    const channel = channels.value.find(c => c.id === channelId);
+    if (!channel) {
+      return undefined;
+    }
+    forgetChannel(channel.name);
+    notifyInfo(
+      reason === "banned"
+        ? `You were banned from #${channel.name}`
+        : `You were removed from #${channel.name}`
+    );
+    return channel.name;
+  }
+
+  // channel:deleted, the admin quit or left, or the channel expired
+  function onChannelDeleted(channelId: string): string | undefined {
+    const channel = channels.value.find(c => c.id === channelId);
+    if (!channel) {
+      return undefined;
+    }
+    // read it before the channel is gone, like in leaveChannel
+    const label = channelLabel(channel.name);
+    forgetChannel(channel.name);
+    notifyInfo(`${label} was deleted`);
+    return channel.name;
   }
 
   // Accepting an invite is the same as joining the channel
@@ -447,6 +500,10 @@ export const useChatStore = defineStore("chat", () => {
     declineInvite,
     renameNick,
     runCommand,
+    onChannelInvited,
+    onChannelAdded,
+    onChannelRemoved,
+    onChannelDeleted,
     simulateTyping,
     reset
   };
