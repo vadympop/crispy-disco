@@ -1,7 +1,6 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
-import type { TypingDraft } from "@/types/chat";
 import type { Channel, Message, PublicProfile } from "@/types/api";
 import type { RemovedReason } from "@cisco-disco/backend/realtime";
 import { client } from "@/lib/client";
@@ -10,6 +9,16 @@ import { parseCommand } from "@/lib/commands";
 
 // messages per history request (the infinite scroll loads one page at a time)
 const PAGE_SIZE = 30;
+// a draft disappears when its author sends no update for this long
+// (closed the tab, lost the connection, or just stopped typing)
+const DRAFT_TIMEOUT_MS = 5000;
+
+// What another member is writing in a channel right now
+export interface TypingDraft {
+  userId: string;
+  nickname: string;
+  text: string;
+}
 
 // What the UI should do after a command ran
 export interface CommandResult {
@@ -31,7 +40,10 @@ export const useChatStore = defineStore("chat", () => {
   const channels = ref<Channel[]>([]);
   const isLoadingChannels = ref(false);
   const notifyMentionsOnly = ref(false);
-  const typing = ref<TypingDraft[]>([]);
+  // channel id -> the drafts of the other members, in the order they started
+  const drafts = ref<Record<string, TypingDraft[]>>({});
+  // "channelId:userId" -> the timer that removes that draft, not reactive
+  const draftTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // channel id -> the loaded part of its history, oldest first
   const messagesByChannel = ref<Record<string, Message[]>>({});
@@ -151,6 +163,8 @@ export const useChatStore = defineStore("chat", () => {
       return;
     }
     messagesByChannel.value[message.channelId] = [...loaded, message];
+    // the draft became this message
+    removeDraft(message.channelId, message.author.id);
 
     const channel = channels.value.find(c => c.id === message.channelId);
     if (channel && message.createdAt) {
@@ -241,6 +255,9 @@ export const useChatStore = defineStore("chat", () => {
       return false;
     }
     delete messagesByChannel.value[channel.id];
+    for (const draft of drafts.value[channel.id] ?? []) {
+      removeDraft(channel.id, draft.userId);
+    }
     removeChannel(name);
     return true;
   }
@@ -456,40 +473,68 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
-  // Fake "someone is typing" so the indicator can be demoed.
-  // Returns a function that stops the simulation.
-  function simulateTyping(): () => void {
-    const drafts = [
-      { nickName: "ed", text: "I think we should move the meeting to Friday" },
-      { nickName: "zuzka", text: "@alex did you see my message?" }
-    ];
-    let tick = 0;
+  // The drafts others are writing in a channel ("X is typing")
+  function draftsOf(channelName: string): TypingDraft[] {
+    const channel = findChannel(channelName);
+    return channel ? (drafts.value[channel.id] ?? []) : [];
+  }
 
-    const timer = setInterval(() => {
-      tick++;
-      // each draft grows one character per tick, then restarts after a pause
-      typing.value = drafts
-        .map((draft, i) => {
-          const length = (tick + i * 15) % (draft.text.length + 20);
-          return {
-            nickName: draft.nickName,
-            text: draft.text.slice(0, length)
-          };
-        })
-        .filter(draft => draft.text.length > 0);
-    }, 200);
+  // typing: the whole draft text, an empty one means they stopped
+  // (sent the message or deleted the text)
+  function onTyping(
+    channelId: string,
+    user: { id: string; nickname: string },
+    text: string
+  ) {
+    // my own drafts from another tab
+    if (user.id === auth.userId) {
+      return;
+    }
+    if (text === "") {
+      removeDraft(channelId, user.id);
+      return;
+    }
 
-    return () => {
-      clearInterval(timer);
-      typing.value = [];
-    };
+    // read it back through the ref: the array `??=` returns is not the
+    // reactive proxy, and a push to it would not update the indicator
+    drafts.value[channelId] ??= [];
+    const list = drafts.value[channelId];
+    const draft = list.find(d => d.userId === user.id);
+    if (draft) {
+      draft.text = text;
+    } else {
+      list.push({ userId: user.id, nickname: user.nickname, text });
+    }
+
+    // every update starts the timeout again
+    const key = `${channelId}:${user.id}`;
+    clearTimeout(draftTimers.get(key));
+    draftTimers.set(
+      key,
+      setTimeout(() => removeDraft(channelId, user.id), DRAFT_TIMEOUT_MS)
+    );
+  }
+
+  function removeDraft(channelId: string, userId: string) {
+    const key = `${channelId}:${userId}`;
+    clearTimeout(draftTimers.get(key));
+    draftTimers.delete(key);
+
+    const list = drafts.value[channelId];
+    if (list) {
+      drafts.value[channelId] = list.filter(d => d.userId !== userId);
+    }
   }
 
   // Forgets everything of the previous user after logout
   function reset() {
     channels.value = [];
     messagesByChannel.value = {};
-    typing.value = [];
+    for (const timer of draftTimers.values()) {
+      clearTimeout(timer);
+    }
+    draftTimers.clear();
+    drafts.value = {};
     notifyMentionsOnly.value = false;
   }
 
@@ -498,7 +543,6 @@ export const useChatStore = defineStore("chat", () => {
     isLoadingChannels,
     fetchChannels,
     notifyMentionsOnly,
-    typing,
     messagesByChannel,
     sortedChannels,
     findChannel,
@@ -525,7 +569,8 @@ export const useChatStore = defineStore("chat", () => {
     onChannelAdded,
     onChannelRemoved,
     onChannelDeleted,
-    simulateTyping,
+    draftsOf,
+    onTyping,
     reset
   };
 });

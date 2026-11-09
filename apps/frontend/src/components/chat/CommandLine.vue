@@ -58,11 +58,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  ref,
+  useTemplateRef,
+  watch
+} from "vue";
 import { useRouter } from "vue-router";
 import type { QInput, QList } from "quasar";
 import { COMMANDS } from "@/lib/commands";
+import { socket } from "@/lib/socket";
 import { useChatStore } from "@/stores/chat-store";
+
+// the others get my draft at most this often while I type
+const DRAFT_INTERVAL_MS = 300;
 
 const props = defineProps<{ channel: string | null }>();
 const emit = defineEmits<{ showMembers: [] }>();
@@ -116,7 +127,53 @@ watch(suggestions, () => {
 
 watch(text, () => {
   dismissed.value = false;
+  sendDraft();
 });
+
+// "X is typing": the members of the open channel see my draft live.
+// Commands are not shown, their draft is sent as "" (stopped typing).
+let lastSentAt = 0;
+let lastSent = { channelId: "", text: "" };
+let pendingDraft: ReturnType<typeof setTimeout> | undefined;
+
+function sendDraft() {
+  clearTimeout(pendingDraft);
+  // too soon after the last one: send once the interval is over,
+  // with whatever the text is by then
+  const wait = lastSentAt + DRAFT_INTERVAL_MS - Date.now();
+  if (wait > 0) {
+    pendingDraft = setTimeout(sendDraft, wait);
+    return;
+  }
+
+  const channelId = props.channel ? chat.findChannel(props.channel)?.id : "";
+  if (!channelId) {
+    return;
+  }
+  emitDraft(channelId, isCommand.value ? "" : text.value);
+}
+
+function emitDraft(channelId: string, draft: string) {
+  if (channelId === lastSent.channelId && draft === lastSent.text) {
+    return;
+  }
+  lastSentAt = Date.now();
+  lastSent = { channelId, text: draft };
+  // volatile: dropped while offline instead of sent late after reconnecting
+  // https://socket.io/docs/v4/emitting-events/#volatile-events
+  socket.volatile.emit("typing", { channelId, text: draft });
+}
+
+// Tells the channel I left that I stopped typing there
+function stopDraft() {
+  clearTimeout(pendingDraft);
+  if (lastSent.text !== "") {
+    emitDraft(lastSent.channelId, "");
+  }
+}
+
+watch(() => props.channel, stopDraft);
+onBeforeUnmount(stopDraft);
 
 // Keep the highlighted row visible when the list scrolls
 watch(activeIndex, async () => {
