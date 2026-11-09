@@ -10,7 +10,6 @@ import { mockMembers, mockUsers } from "@/mocks/chat";
 
 // messages per history request (the infinite scroll loads one page at a time)
 const PAGE_SIZE = 30;
-const KICKS_TO_BAN = 3;
 
 // What the UI should do after a command ran
 export interface CommandResult {
@@ -53,9 +52,6 @@ export const useChatStore = defineStore("chat", () => {
   const isLoadingChannels = ref(false);
   // All three are keyed by channel name and hold user ids
   const members = ref<Record<string, string[]>>(mockMembersToIds());
-  const bans = ref<Record<string, string[]>>({});
-  // channel -> kicked user id -> ids of members who voted for the kick
-  const kickVotes = ref<Record<string, Record<string, string[]>>>({});
   const notifyMentionsOnly = ref(false);
   const typing = ref<TypingDraft[]>([]);
 
@@ -321,94 +317,43 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
-  function invite(channel: Channel, user: User) {
-    const nick = user.nickname;
-    if (channel.isPrivate && !isAdmin(channel)) {
-      notifyError("Only the admin can invite to a private channel");
-      return;
-    }
+  // The moderation commands send the nick as typed. The server finds the
+  // user and checks the rules (admin rights, channel type, bans, votes),
+  // its error messages are shown by the api-errors boot file.
 
-    const banned = bans.value[channel.name] ?? [];
-    if (banned.includes(user.id)) {
-      if (!isAdmin(channel)) {
-        notifyError(`${nick} is banned, only the admin can let them back`);
-        return;
-      }
-      bans.value[channel.name] = banned.filter(id => id !== user.id);
-    }
-
-    const current = members.value[channel.name] ?? [];
-    if (current.includes(user.id)) {
-      notifyInfo(`${nick} is already a member`);
-      return;
-    }
-    members.value[channel.name] = [...current, user.id];
-    notifyInfo(`${nick} was invited to #${channel.name}`);
-  }
-
-  function revoke(channel: Channel, user: User) {
-    if (!channel.isPrivate || !isAdmin(channel)) {
-      notifyError("/revoke works only for the admin of a private channel");
-      return;
-    }
-    removeMember(channel.name, user.id);
-    notifyInfo(`${user.nickname} was removed from #${channel.name}`);
-  }
-
-  function kick(channel: Channel, user: User) {
-    const myId = auth.userId;
-    if (!myId) {
-      return;
-    }
-    const nick = user.nickname;
-    if (channel.isPrivate) {
-      notifyError("/kick works only in public channels, use /revoke");
-      return;
-    }
-    if (user.id === myId || user.id === channel.creator.id) {
-      notifyError(`You can't kick ${nick}`);
-      return;
-    }
-    if (!members.value[channel.name]?.includes(user.id)) {
-      notifyError(`${nick} is not a member of #${channel.name}`);
-      return;
-    }
-
-    // Admin kick = permanent ban right away
-    if (isAdmin(channel)) {
-      ban(channel.name, user);
-      return;
-    }
-
-    const votes = (kickVotes.value[channel.name] ??= {});
-    const voters = (votes[user.id] ??= []);
-    if (!voters.includes(myId)) {
-      voters.push(myId);
-    }
-    // Pretend another member already voted too, so the ban can be demoed
-    const otherVoter = members.value[channel.name]?.find(
-      id => id !== user.id && !voters.includes(id)
+  // /invite: the admin can also invite a banned user, which lifts the ban
+  async function invite(channel: Channel, nickname: string) {
+    const result = await client.api.channels.invite({
+      params: { id: channel.id },
+      body: { nickname }
+    });
+    notifyInfo(
+      result.data.unbanned
+        ? `${nickname} is no longer banned and was invited to #${channel.name}`
+        : `${nickname} was invited to #${channel.name}`
     );
-    if (voters.length < KICKS_TO_BAN - 1 && otherVoter) {
-      voters.push(otherVoter);
-    }
-
-    if (voters.length >= KICKS_TO_BAN) {
-      ban(channel.name, user);
-    } else {
-      notifyInfo(`Kick vote for ${nick}: ${voters.length}/${KICKS_TO_BAN}`);
-    }
   }
 
-  function ban(channelName: string, user: User) {
-    removeMember(channelName, user.id);
-    bans.value[channelName] = [...(bans.value[channelName] ?? []), user.id];
-    notifyInfo(`${user.nickname} is permanently banned from #${channelName}`);
+  // /revoke: the admin removes a member or an invite of a private channel
+  async function revoke(channel: Channel, nickname: string) {
+    await client.api.channels.revoke({
+      params: { id: channel.id },
+      body: { nickname }
+    });
+    notifyInfo(`${nickname} was removed from #${channel.name}`);
   }
 
-  function removeMember(channelName: string, userId: string) {
-    members.value[channelName] = (members.value[channelName] ?? []).filter(
-      id => id !== userId
+  // /kick: a vote from a member, an instant permanent ban from the admin
+  async function kick(channel: Channel, nickname: string) {
+    const result = await client.api.channels.kick({
+      params: { id: channel.id },
+      body: { nickname }
+    });
+    const { banned, votes, required } = result.data;
+    notifyInfo(
+      banned
+        ? `${nickname} is permanently banned from #${channel.name}`
+        : `Kick vote for ${nickname}: ${votes}/${required}`
     );
   }
 
@@ -453,16 +398,12 @@ export const useChatStore = defineStore("chat", () => {
           notifyError(`Usage: /${command.name} nickName`);
           return {};
         }
-        // the command names a nick, from here on we work with the user
-        const user = findUser(firstArg);
-        if (!user) {
-          notifyError(`User ${firstArg} does not exist`);
-        } else if (command.name === "invite") {
-          invite(channel, user);
+        if (command.name === "invite") {
+          await invite(channel, firstArg);
         } else if (command.name === "revoke") {
-          revoke(channel, user);
+          await revoke(channel, firstArg);
         } else {
-          kick(channel, user);
+          await kick(channel, firstArg);
         }
         return {};
       }
