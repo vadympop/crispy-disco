@@ -9,6 +9,8 @@ import { parseCommand } from "@/lib/commands";
 
 // messages per history request (the infinite scroll loads one page at a time)
 const PAGE_SIZE = 30;
+// messages per request when catching up after a reconnect (the server max)
+const CATCH_UP_PAGE_SIZE = 100;
 // a draft disappears when its author sends no update for this long
 // (closed the tab, lost the connection, or just stopped typing)
 const DRAFT_TIMEOUT_MS = 5000;
@@ -526,6 +528,42 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
+  // While the socket was down (offline status, lost connection) the events
+  // were missed. Reloads the channel list and fetches the messages after
+  // the newest loaded one in every channel I am still in.
+  async function resync() {
+    await fetchChannels();
+
+    for (const channelId of Object.keys(messagesByChannel.value)) {
+      const channel = channels.value.find(c => c.id === channelId);
+      if (!channel || channel.invited) {
+        // removed or deleted while I was away
+        delete messagesByChannel.value[channelId];
+        delete drafts.value[channelId];
+      } else {
+        await catchUp(channelId);
+      }
+    }
+  }
+
+  async function catchUp(channelId: string) {
+    let after = messagesByChannel.value[channelId]?.at(-1)?.cursor;
+    let hasMore = true;
+    while (after && hasMore) {
+      const result = await client.api.messages.index({
+        params: { id: channelId },
+        query: { after, limit: CATCH_UP_PAGE_SIZE }
+      });
+      const { messages } = result.data;
+      // oldest first, so they land at the end in order
+      for (const message of messages) {
+        addMessage(message);
+      }
+      hasMore = result.data.hasMore;
+      after = messages.at(-1)?.cursor;
+    }
+  }
+
   // Forgets everything of the previous user after logout
   function reset() {
     channels.value = [];
@@ -565,6 +603,7 @@ export const useChatStore = defineStore("chat", () => {
     declineInvite,
     renameNick,
     runCommand,
+    resync,
     onChannelInvited,
     onChannelAdded,
     onChannelRemoved,

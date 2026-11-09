@@ -20,6 +20,17 @@ export default defineBoot(({ router }) => {
     { immediate: true }
   );
 
+  // "connect" also fires after every reconnect: going back online, or the
+  // connection came back. Events sent meanwhile were missed, so resync.
+  // The first connect needs nothing, the chat page loads the channels.
+  let connectedBefore = false;
+  socket.on("connect", () => {
+    if (connectedBefore) {
+      void chat.resync();
+    }
+    connectedBefore = true;
+  });
+
   // Leaves the page of a channel I am no longer in
   function leaveChannelPage(name: string | undefined) {
     const params = router.currentRoute.value.params;
