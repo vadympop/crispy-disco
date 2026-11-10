@@ -6,14 +6,17 @@ import { useChatStore } from "@/stores/chat-store";
 export default defineBoot(({ router }) => {
   let restored = false;
 
-  // logout, or a token the server no longer accepts: the next user who logs
-  // in this tab must not see the channels and messages of the previous one
   const auth = useAuthStore();
   watch(
     () => auth.isLoggedIn,
     isLoggedIn => {
       if (!isLoggedIn) {
         useChatStore().reset();
+
+        const current = router.currentRoute.value;
+        if (current.matched.some(r => r.meta.requiresAuth)) {
+          void router.replace("/");
+        }
       }
     }
   );

@@ -128,7 +128,7 @@
             icon="logout"
             label="Log out"
             class="text-red-4"
-            to="/"
+            @click="auth.logout()"
           />
           <q-space />
           <q-btn v-close-popup flat no-caps label="Cancel" />
