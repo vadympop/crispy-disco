@@ -41,7 +41,7 @@ export default defineConfig(ctx => {
       // Override with `API_URL=https://... quasar build`.
       // https://v2.quasar.dev/quasar-cli-vite/handling-import-meta-env#with-quasar-config-file
       defineEnv: {
-        API_URL: process.env.API_URL ?? "http://localhost:3333"
+        API_URL: import.meta.env.API_URL ?? "http://localhost:3333"
       },
 
       typescript: {
@@ -98,6 +98,7 @@ export default defineConfig(ctx => {
       },
       // vueDevtools: true,
       // https: true,
+      allowedHosts: ["e161-147-175-160-33.ngrok-free.app"],
       open: true // opens browser window automatically
     },
 
