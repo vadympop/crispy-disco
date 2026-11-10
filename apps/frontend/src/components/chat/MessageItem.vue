@@ -29,10 +29,10 @@
         <template v-for="(part, i) in parts" :key="i">
           <span
             v-if="part.startsWith('@')"
-            class="mention"
-            :class="{
-              'mention-me cursor-pointer': part === `@${auth.nickname}`
-            }"
+            class="mention cursor-pointer"
+            :class="{ 'mention-me': part === `@${auth.nickname}` }"
+            title="Copy nickname"
+            @click="copyNickname(part)"
             >{{ part }}</span
           >
           <template v-else>{{ part }}</template>
@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { date } from "quasar";
+import { Notify, copyToClipboard, date } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Message } from "@/types/api";
@@ -62,6 +62,17 @@ const parts = computed(() =>
 );
 
 const mentionsMe = computed(() => parts.value.includes(`@${auth.nickname}`));
+
+// "@ed" -> "ed", ready to paste into /invite, /kick, ...
+async function copyNickname(mention: string) {
+  const nickname = mention.slice(1);
+  try {
+    await copyToClipboard(nickname);
+    Notify.create({ type: "positive", message: `Copied ${nickname}` });
+  } catch {
+    Notify.create({ type: "negative", message: "Could not copy the nickname" });
+  }
+}
 
 // the column is nullable, but the server always sets it
 const time = computed(() =>
