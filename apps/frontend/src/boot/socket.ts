@@ -1,6 +1,8 @@
 import { watch } from "vue";
 import { defineBoot } from "#q-app";
 import { socket } from "@/lib/socket";
+import { shouldNotify, showMessageNotification } from "@/lib/notifications";
+import type { Message } from "@/types/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useChatStore } from "@/stores/chat-store";
 import { useUsersStore } from "@/stores/users-store";
@@ -41,12 +43,23 @@ export default defineBoot(({ router }) => {
     }
   }
 
+  // only for messages that arrive live, not the ones caught up by resync()
+  function notifyAboutMessage(message: Message) {
+    const channel = chat.channels.find(c => c.id === message.channelId);
+    if (channel && shouldNotify(message, auth.me)) {
+      void showMessageNotification(message, channel, router);
+    }
+  }
+
   // The handlers are registered once, socket.io keeps them across reconnects.
   // My own messages come back here too, addMessage adds each one only once.
   socket.on("typing", ({ channelId, user, text }) =>
     chat.onTyping(channelId, user, text)
   );
-  socket.on("message:new", message => chat.addMessage(message));
+  socket.on("message:new", message => {
+    chat.addMessage(message);
+    notifyAboutMessage(message);
+  });
   socket.on("message:updated", message => chat.onMessageUpdated(message));
   socket.on("message:deleted", ({ channelId, messageId }) =>
     chat.onMessageDeleted(channelId, messageId)
