@@ -1,8 +1,9 @@
-import { AppVisibility } from "quasar";
+import { AppVisibility, Notify } from "quasar";
 import type { Router } from "vue-router";
 import type { Channel, Message, User } from "@/types/api";
 import { avatarSrc } from "@/lib/avatar";
 import { mentions } from "@/lib/mentions";
+import { LOCALSTORAGE_KEYS } from "@/lib/storage-keys";
 
 // Browser notifications for new messages, shown only while the app is
 // in the background. https://developer.mozilla.org/en-US/docs/Web/API/Notification
@@ -24,6 +25,38 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
     return "denied";
   }
   return Notification.requestPermission();
+}
+
+// Asks once, on the first visit of the chat, whether to turn them on.
+// Later they can be turned on in the settings dialog.
+export function offerNotifications() {
+  // also "denied" when the browser has no notifications
+  if (notificationPermission() !== "default") {
+    return;
+  }
+  // localStorage can be blocked (private mode), then it isn't offered
+  try {
+    if (localStorage.getItem(LOCALSTORAGE_KEYS.notificationsOffered)) {
+      return;
+    }
+    localStorage.setItem(LOCALSTORAGE_KEYS.notificationsOffered, "1");
+  } catch {
+    return;
+  }
+
+  Notify.create({
+    message:
+      "Get notified about new messages while the app is in the background?",
+    timeout: 0,
+    actions: [
+      {
+        label: "Enable",
+        color: "white",
+        handler: () => void requestNotificationPermission()
+      },
+      { label: "Not now", color: "white" }
+    ]
+  });
 }
 
 // The rules of the assignment: not my own message, the app is not visible

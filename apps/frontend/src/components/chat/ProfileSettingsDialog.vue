@@ -118,6 +118,28 @@
                 <q-toggle v-model="form.notifyMentionsOnly" />
               </q-item-section>
             </q-item>
+            <q-item>
+              <q-item-section>
+                <q-item-label>Browser notifications</q-item-label>
+                <q-item-label caption>{{
+                  PERMISSION_HINTS[permission]
+                }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn
+                  v-if="permission === 'default'"
+                  rounded
+                  outline
+                  dense
+                  no-caps
+                  color="white"
+                  label="Enable"
+                  class="q-px-md"
+                  @click="enableNotifications"
+                />
+                <q-icon v-else-if="permission === 'granted'" name="check" />
+              </q-item-section>
+            </q-item>
           </q-list>
         </q-card-section>
 
@@ -152,6 +174,10 @@
 import { reactive, ref, useTemplateRef } from "vue";
 import { Notify } from "quasar";
 import { STATUS_OPTIONS, type UserStatus } from "@/lib/status";
+import {
+  notificationPermission,
+  requestNotificationPermission
+} from "@/lib/notifications";
 import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
@@ -179,6 +205,18 @@ const form = reactive({
 const pickedAvatar = ref<File | null>(null);
 const saving = ref(false);
 
+// asked right away, not on Save: the browser only asks after a click
+const permission = ref<NotificationPermission>(notificationPermission());
+const PERMISSION_HINTS: Record<NotificationPermission, string> = {
+  granted: "Shown while the app is in the background",
+  default: "Allow them to hear about new messages",
+  denied: "Blocked or not supported, allow them in the browser's site settings"
+};
+
+async function enableNotifications() {
+  permission.value = await requestNotificationPermission();
+}
+
 function reset() {
   form.nickName = auth.nickname ?? "";
   form.firstName = auth.me?.firstName ?? "";
@@ -187,6 +225,7 @@ function reset() {
   form.status = (auth.me?.status ?? "online") as UserStatus;
   form.notifyMentionsOnly = auth.me?.notifyMentionsOnly ?? false;
   pickedAvatar.value = null;
+  permission.value = notificationPermission();
 }
 
 function clearAvatar() {
