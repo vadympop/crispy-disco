@@ -1,13 +1,11 @@
 import { rm } from 'node:fs/promises'
 import app from '@adonisjs/core/services/app'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
-import { DateTime } from 'luxon'
-import type User from '#models/user'
 
 /**
  * Profile pictures live on disk, one folder per user:
  * storage/uploads/<userId>/avatar.jpg
- * The users.avatar_updated_at column says whether there is one.
+ * Only the files are handled here, users.avatar_updated_at is set by UserService.
  */
 export default class AvatarService {
   static readonly FILE_NAME = 'avatar.jpg'
@@ -21,18 +19,14 @@ export default class AvatarService {
   }
 
   // https://docs.adonisjs.com/guides/basics/file-uploads#moving-files
-  async save(user: User, file: MultipartFile) {
-    await file.move(this.folderOf(user.id), {
+  async store(userId: string, file: MultipartFile) {
+    await file.move(this.folderOf(userId), {
       name: AvatarService.FILE_NAME,
       overwrite: true,
     })
-    user.avatarUpdatedAt = DateTime.now()
-    await user.save()
   }
 
-  async remove(user: User) {
-    await rm(this.folderOf(user.id), { recursive: true, force: true })
-    user.avatarUpdatedAt = null
-    await user.save()
+  async delete(userId: string) {
+    await rm(this.folderOf(userId), { recursive: true, force: true })
   }
 }

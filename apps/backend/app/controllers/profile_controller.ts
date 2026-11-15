@@ -1,5 +1,5 @@
 import { inject } from '@adonisjs/core'
-import AvatarService from '#services/avatar_service'
+import UserService from '#services/user_service'
 import UserTransformer from '#transformers/user_transformer'
 import {
   updateAvatarValidator,
@@ -13,7 +13,7 @@ import type { HttpContext } from '@adonisjs/core/http'
  */
 @inject()
 export default class ProfileController {
-  constructor(protected avatarService: AvatarService) {}
+  constructor(protected userService: UserService) {}
 
   async show({ auth, serialize }: HttpContext) {
     return serialize(UserTransformer.transform(auth.getUserOrFail()))
@@ -25,8 +25,7 @@ export default class ProfileController {
       meta: { userId: user.id },
     })
 
-    user.merge(data)
-    await user.save()
+    await this.userService.updateProfile(user, data)
     return serialize(UserTransformer.transform(user))
   }
 
@@ -34,8 +33,7 @@ export default class ProfileController {
     const user = auth.getUserOrFail()
     const { status } = await request.validateUsing(updateStatusValidator)
 
-    user.status = status
-    await user.save()
+    await this.userService.setStatus(user, status)
     return serialize(UserTransformer.transform(user))
   }
 
@@ -43,14 +41,14 @@ export default class ProfileController {
     const user = auth.getUserOrFail()
     const { avatar } = await request.validateUsing(updateAvatarValidator)
 
-    await this.avatarService.save(user, avatar)
+    await this.userService.setAvatar(user, avatar)
     return serialize(UserTransformer.transform(user))
   }
 
   async destroyAvatar({ auth, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
 
-    await this.avatarService.remove(user)
+    await this.userService.removeAvatar(user)
     return serialize(UserTransformer.transform(user))
   }
 }

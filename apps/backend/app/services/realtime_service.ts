@@ -1,13 +1,17 @@
 import type { DefaultEventsMap, Server } from 'socket.io'
 import type { InferData } from '@adonisjs/core/types/transformers'
 import { BaseSerializer } from '@adonisjs/core/transformers'
+import db from '@adonisjs/lucid/services/db'
 import type Channel from '#models/channel'
 import type Message from '#models/message'
+import type User from '#models/user'
 import ChannelTransformer from '#transformers/channel_transformer'
 import MessageTransformer from '#transformers/message_transformer'
+import PublicProfileTransformer from '#transformers/public_profile_transformer'
 
 export type MessageData = InferData<MessageTransformer>
 export type ChannelData = InferData<ChannelTransformer>
+export type PublicProfileData = InferData<PublicProfileTransformer>
 export type SocketUser = { id: string; nickname: string }
 export type RemovedReason = 'revoked' | 'banned'
 
@@ -20,6 +24,7 @@ export interface ServerToClientEvents {
   'channel:added': (channel: ChannelData) => void
   'channel:removed': (payload: { channelId: string; reason: RemovedReason }) => void
   'channel:deleted': (payload: { channelId: string }) => void
+  'user:updated': (user: PublicProfileData) => void
 }
 
 export interface ClientToServerEvents {
@@ -106,6 +111,21 @@ class RealtimeService {
   channelRemoved(userId: string, channelId: string, reason: RemovedReason) {
     this.leaveChannel(userId, channelId)
     this.io?.to(userRoom(userId)).emit('channel:removed', { channelId, reason })
+  }
+
+  // A new nickname, status or picture: everyone who shares a channel with
+  // the user sees it, and so do the user's own other tabs
+  async userUpdated(user: User) {
+    if (!this.io) return
+    const memberships = await db
+      .from('channel_members')
+      .where('user_id', user.id)
+      .where('status', 'member')
+      .select('channel_id')
+    const rooms = [userRoom(user.id), ...memberships.map((row) => channelRoom(row.channel_id))]
+
+    const data = await serializer.serialize(PublicProfileTransformer.transform(user))
+    this.io.to(rooms).emit('user:updated', data)
   }
 
   channelDeleted(channelId: string) {
