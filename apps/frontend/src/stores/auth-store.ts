@@ -1,6 +1,11 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
-import type { LoginRequest, SignupRequest, User } from "@/types/api";
+import type {
+  LoginRequest,
+  PublicProfile,
+  SignupRequest,
+  User
+} from "@/types/api";
 import { client } from "@/lib/client";
 import { LOCALSTORAGE_KEYS } from "@/lib/storage-keys";
 import type { UserStatus } from "@/lib/status";
@@ -87,6 +92,14 @@ export const useAuthStore = defineStore("auth", () => {
     me.value = result.data;
   }
 
+  // My profile changed in another tab. The update only has the public
+  // fields, the rest of mine (email, settings) stays as loaded.
+  function onUserUpdated(profile: PublicProfile) {
+    if (me.value && profile.id === me.value.id) {
+      Object.assign(me.value, profile);
+    }
+  }
+
   return {
     me,
     userId,
@@ -101,6 +114,7 @@ export const useAuthStore = defineStore("auth", () => {
     setStatus,
     updateProfile,
     uploadAvatar,
-    removeAvatar
+    removeAvatar,
+    onUserUpdated
   };
 });

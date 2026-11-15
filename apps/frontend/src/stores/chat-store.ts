@@ -1,7 +1,7 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
-import type { Channel, Message, PublicProfile } from "@/types/api";
+import type { Channel, Message, PublicProfile, UserSummary } from "@/types/api";
 import type { RemovedReason } from "@cisco-disco/backend/realtime";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
@@ -356,15 +356,24 @@ export const useChatStore = defineStore("chat", () => {
     removeChannel(name);
   }
 
-  // Everything else uses ids, so only the loaded message authors follow
-  // the rename. Old "@nick" mentions in texts stay as written.
-  function renameNick(oldNick: string, newNick: string) {
-    const rename = (nick: string) => (nick === oldNick ? newNick : nick);
+  // Another user (or I, in another tab) changed the nickname or picture.
+  // Everything points to users by id, so only the copies embedded in the
+  // loaded messages and channels need the new values.
+  // Old "@nick" mentions in texts stay as written.
+  function onUserUpdated(user: UserSummary) {
+    const update = (target: UserSummary) => {
+      if (target.id === user.id) {
+        target.nickname = user.nickname;
+        target.avatarUrl = user.avatarUrl;
+      }
+    };
 
     for (const list of Object.values(messagesByChannel.value)) {
-      for (const message of list) {
-        message.author.nickname = rename(message.author.nickname);
-      }
+      list.forEach(message => update(message.author));
+    }
+    for (const channel of channels.value) {
+      update(channel.creator);
+      channel.members?.forEach(update);
     }
   }
 
@@ -598,7 +607,7 @@ export const useChatStore = defineStore("chat", () => {
     acceptInvite,
     startDirectChat,
     declineInvite,
-    renameNick,
+    onUserUpdated,
     runCommand,
     resync,
     onChannelInvited,

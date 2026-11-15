@@ -5,6 +5,8 @@ import "@cisco-disco/backend/registry";
 export type User = Data.User;
 export type Channel = Data.Channel;
 export type PublicProfile = Data.PublicProfile;
+// the short form embedded where something points to a user (authors, creator)
+export type UserSummary = Data.UserSummary;
 export type Message = Data.Message;
 // what I have in common with another user (the profile popup)
 export type UserStats = Route.Response<"users.stats">["data"];

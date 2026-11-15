@@ -268,20 +268,14 @@ async function toSquareAvatar(
 // Each part is saved by its own request. If one fails, the server's error
 // is shown (api-errors boot file) and the dialog stays open to try again.
 async function onSubmit() {
-  const oldNick = auth.nickname;
-  const newNick = form.nickName;
-
   saving.value = true;
   try {
     await auth.updateProfile({
-      nickname: newNick,
+      nickname: form.nickName,
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
       notifyMentionsOnly: form.notifyMentionsOnly
     });
-    if (oldNick && newNick !== oldNick) {
-      chat.renameNick(oldNick, newNick);
-    }
 
     if (form.status !== auth.me?.status) {
       await auth.setStatus(form.status);
@@ -293,6 +287,10 @@ async function onSubmit() {
       await auth.removeAvatar();
     }
 
+    // the socket brings the same update, but not while I am offline
+    if (auth.me) {
+      chat.onUserUpdated(auth.me);
+    }
     Notify.create({ type: "info", message: "Profile updated" });
     open.value = false;
   } finally {

@@ -23,5 +23,12 @@ export const useUsersStore = defineStore("users", () => {
     return result.data;
   }
 
-  return { profiles, stats, fetchProfile, fetchStats };
+  // a live update from the socket, only kept if the profile was loaded
+  function onUserUpdated(profile: PublicProfile) {
+    if (profile.id in profiles.value) {
+      profiles.value[profile.id] = profile;
+    }
+  }
+
+  return { profiles, stats, fetchProfile, fetchStats, onUserUpdated };
 });

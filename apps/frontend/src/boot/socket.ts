@@ -3,10 +3,12 @@ import { defineBoot } from "#q-app";
 import { socket } from "@/lib/socket";
 import { useAuthStore } from "@/stores/auth-store";
 import { useChatStore } from "@/stores/chat-store";
+import { useUsersStore } from "@/stores/users-store";
 
 export default defineBoot(({ router }) => {
   const auth = useAuthStore();
   const chat = useChatStore();
+  const users = useUsersStore();
 
   watch(
     () => auth.isLoggedIn && auth.me?.status !== "offline",
@@ -57,4 +59,10 @@ export default defineBoot(({ router }) => {
   socket.on("channel:deleted", ({ channelId }) =>
     leaveChannelPage(chat.onChannelDeleted(channelId))
   );
+  // a new nickname, status or picture of someone I share a channel with
+  socket.on("user:updated", profile => {
+    auth.onUserUpdated(profile);
+    users.onUserUpdated(profile);
+    chat.onUserUpdated(profile);
+  });
 });
