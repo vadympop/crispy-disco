@@ -28,10 +28,13 @@ router
     router
       .group(() => {
         router.get('profile', [controllers.Profile, 'show'])
+        router.patch('profile', [controllers.Profile, 'update'])
+        router.put('status', [controllers.Profile, 'updateStatus'])
+        router.post('avatar', [controllers.Profile, 'updateAvatar'])
+        router.delete('avatar', [controllers.Profile, 'destroyAvatar'])
         router.post('logout', [controllers.AccessTokens, 'destroy'])
       })
       .prefix('account')
-      .as('profile')
       .use(middleware.auth())
     router
       .group(() => {
@@ -68,5 +71,10 @@ router
       .where('id', router.matchers.uuid())
       .prefix('users')
       .use(middleware.auth())
+
+    // no auth: an <img> tag can't send the bearer token, and pictures are public
+    router
+      .get('users/:id/avatar', [controllers.Users, 'avatar'])
+      .where('id', router.matchers.uuid())
   })
   .prefix('/api/v1')

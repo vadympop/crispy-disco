@@ -11,12 +11,14 @@ export interface ApiDefinition {
     }
   }
   profile: {
-    profile: {
-      show: typeof routes['profile.profile.show']
-    }
-    accessTokens: {
-      destroy: typeof routes['profile.access_tokens.destroy']
-    }
+    show: typeof routes['profile.show']
+    update: typeof routes['profile.update']
+    updateStatus: typeof routes['profile.update_status']
+    updateAvatar: typeof routes['profile.update_avatar']
+    destroyAvatar: typeof routes['profile.destroy_avatar']
+  }
+  accessTokens: {
+    destroy: typeof routes['access_tokens.destroy']
   }
   channels: {
     index: typeof routes['channels.index']
@@ -40,5 +42,6 @@ export interface ApiDefinition {
   users: {
     show: typeof routes['users.show']
     stats: typeof routes['users.stats']
+    avatar: typeof routes['users.avatar']
   }
 }

@@ -18,17 +18,41 @@ const routes = {
     tokens: [{"old":"/api/v1/auth/login","type":0,"val":"api","end":""},{"old":"/api/v1/auth/login","type":0,"val":"v1","end":""},{"old":"/api/v1/auth/login","type":0,"val":"auth","end":""},{"old":"/api/v1/auth/login","type":0,"val":"login","end":""}],
     types: placeholder as Registry['auth.access_tokens.store']['types'],
   },
-  'profile.profile.show': {
+  'profile.show': {
     methods: ["GET","HEAD"],
     pattern: '/api/v1/account/profile',
     tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
-    types: placeholder as Registry['profile.profile.show']['types'],
+    types: placeholder as Registry['profile.show']['types'],
   },
-  'profile.access_tokens.destroy': {
+  'profile.update': {
+    methods: ["PATCH"],
+    pattern: '/api/v1/account/profile',
+    tokens: [{"old":"/api/v1/account/profile","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile","type":0,"val":"profile","end":""}],
+    types: placeholder as Registry['profile.update']['types'],
+  },
+  'profile.update_status': {
+    methods: ["PUT"],
+    pattern: '/api/v1/account/status',
+    tokens: [{"old":"/api/v1/account/status","type":0,"val":"api","end":""},{"old":"/api/v1/account/status","type":0,"val":"v1","end":""},{"old":"/api/v1/account/status","type":0,"val":"account","end":""},{"old":"/api/v1/account/status","type":0,"val":"status","end":""}],
+    types: placeholder as Registry['profile.update_status']['types'],
+  },
+  'profile.update_avatar': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/avatar',
+    tokens: [{"old":"/api/v1/account/avatar","type":0,"val":"api","end":""},{"old":"/api/v1/account/avatar","type":0,"val":"v1","end":""},{"old":"/api/v1/account/avatar","type":0,"val":"account","end":""},{"old":"/api/v1/account/avatar","type":0,"val":"avatar","end":""}],
+    types: placeholder as Registry['profile.update_avatar']['types'],
+  },
+  'profile.destroy_avatar': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/account/avatar',
+    tokens: [{"old":"/api/v1/account/avatar","type":0,"val":"api","end":""},{"old":"/api/v1/account/avatar","type":0,"val":"v1","end":""},{"old":"/api/v1/account/avatar","type":0,"val":"account","end":""},{"old":"/api/v1/account/avatar","type":0,"val":"avatar","end":""}],
+    types: placeholder as Registry['profile.destroy_avatar']['types'],
+  },
+  'access_tokens.destroy': {
     methods: ["POST"],
     pattern: '/api/v1/account/logout',
     tokens: [{"old":"/api/v1/account/logout","type":0,"val":"api","end":""},{"old":"/api/v1/account/logout","type":0,"val":"v1","end":""},{"old":"/api/v1/account/logout","type":0,"val":"account","end":""},{"old":"/api/v1/account/logout","type":0,"val":"logout","end":""}],
-    types: placeholder as Registry['profile.access_tokens.destroy']['types'],
+    types: placeholder as Registry['access_tokens.destroy']['types'],
   },
   'channels.index': {
     methods: ["GET","HEAD"],
@@ -131,6 +155,12 @@ const routes = {
     pattern: '/api/v1/users/:id/stats',
     tokens: [{"old":"/api/v1/users/:id/stats","type":0,"val":"api","end":""},{"old":"/api/v1/users/:id/stats","type":0,"val":"v1","end":""},{"old":"/api/v1/users/:id/stats","type":0,"val":"users","end":""},{"old":"/api/v1/users/:id/stats","type":1,"val":"id","end":""},{"old":"/api/v1/users/:id/stats","type":0,"val":"stats","end":""}],
     types: placeholder as Registry['users.stats']['types'],
+  },
+  'users.avatar': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/users/:id/avatar',
+    tokens: [{"old":"/api/v1/users/:id/avatar","type":0,"val":"api","end":""},{"old":"/api/v1/users/:id/avatar","type":0,"val":"v1","end":""},{"old":"/api/v1/users/:id/avatar","type":0,"val":"users","end":""},{"old":"/api/v1/users/:id/avatar","type":1,"val":"id","end":""},{"old":"/api/v1/users/:id/avatar","type":0,"val":"avatar","end":""}],
+    types: placeholder as Registry['users.avatar']['types'],
   },
 } as const satisfies Record<string, AdonisEndpoint>
 

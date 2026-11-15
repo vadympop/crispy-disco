@@ -31,7 +31,7 @@ export const useAuthStore = defineStore("auth", () => {
     if (!localStorage.getItem(LOCALSTORAGE_KEYS.authToken)) return;
     isRestoring.value = true;
     try {
-      const result = await client.api.profile.profile.show({});
+      const result = await client.api.profile.show({});
       me.value = result.data;
     } catch {
       // token expired or revoked
@@ -53,7 +53,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function logout() {
     try {
-      await client.api.profile.accessTokens.destroy({});
+      await client.api.accessTokens.destroy({});
     } finally {
       clearSession();
     }
