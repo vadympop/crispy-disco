@@ -59,21 +59,50 @@ export function offerNotifications() {
   });
 }
 
-// The rules of the assignment: not my own message, the app is not visible
-// (https://quasar.dev/quasar-plugins/app-visibility), no notifications in
-// DND, and with "mentions only" just the messages with my @nickname.
+// The settings both kinds follow: not my own message, nothing in DND, and
+// with "mentions only" just the messages with my @nickname.
 // Offline needs no rule: the socket is disconnected then.
-export function shouldNotify(message: Message, me: User | null): boolean {
-  if (!me || message.author.id === me.id) {
-    return false;
-  }
-  if (AppVisibility.appVisible || notificationPermission() !== "granted") {
-    return false;
-  }
-  if (me.status === "dnd") {
+function wantsNotification(message: Message, me: User | null): boolean {
+  if (!me || message.author.id === me.id || me.status === "dnd") {
     return false;
   }
   return !me.notifyMentionsOnly || mentions(message.content, me.nickname);
+}
+
+// The rule of the assignment: a browser notification only while the app is
+// not visible (https://quasar.dev/quasar-plugins/app-visibility)
+export function shouldNotify(message: Message, me: User | null): boolean {
+  return (
+    !AppVisibility.appVisible &&
+    notificationPermission() === "granted" &&
+    wantsNotification(message, me)
+  );
+}
+
+// While the app is visible, a toast tells about messages in the other
+// channels. The open channel shows them anyway.
+export function shouldShowToast(
+  message: Message,
+  me: User | null,
+  openChannelId: string | undefined
+): boolean {
+  return (
+    AppVisibility.appVisible &&
+    message.channelId !== openChannelId &&
+    wantsNotification(message, me)
+  );
+}
+
+// Notify puts identical toasts together with a counter badge, so several
+// messages from the same person in the same channel don't pile up
+export function showMessageToast(message: Message, channel: Channel) {
+  const from = message.author.nickname;
+  Notify.create({
+    type: "info",
+    message: channel.isDirect
+      ? `You have a new message from ${from}`
+      : `You have a new message from ${from} in #${channel.name}`
+  });
 }
 
 function snippet(content: string): string {

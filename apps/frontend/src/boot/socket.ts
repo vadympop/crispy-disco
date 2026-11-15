@@ -1,7 +1,12 @@
 import { watch } from "vue";
 import { defineBoot } from "#q-app";
 import { socket } from "@/lib/socket";
-import { shouldNotify, showMessageNotification } from "@/lib/notifications";
+import {
+  shouldNotify,
+  shouldShowToast,
+  showMessageNotification,
+  showMessageToast
+} from "@/lib/notifications";
 import type { Message } from "@/types/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useChatStore } from "@/stores/chat-store";
@@ -43,11 +48,23 @@ export default defineBoot(({ router }) => {
     }
   }
 
+  // the channel whose page is open, if any
+  function openChannelId(): string | undefined {
+    const params = router.currentRoute.value.params;
+    return "name" in params ? chat.findChannel(params.name)?.id : undefined;
+  }
+
   // only for messages that arrive live, not the ones caught up by resync()
+  // in the background a browser notification, in the app a toast
   function notifyAboutMessage(message: Message) {
     const channel = chat.channels.find(c => c.id === message.channelId);
-    if (channel && shouldNotify(message, auth.me)) {
+    if (!channel) {
+      return;
+    }
+    if (shouldNotify(message, auth.me)) {
       void showMessageNotification(message, channel, router);
+    } else if (shouldShowToast(message, auth.me, openChannelId())) {
+      showMessageToast(message, channel);
     }
   }
 
