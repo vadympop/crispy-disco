@@ -41,7 +41,6 @@ export const useChatStore = defineStore("chat", () => {
   // Filled from the API by fetchChannels()
   const channels = ref<Channel[]>([]);
   const isLoadingChannels = ref(false);
-  const notifyMentionsOnly = ref(false);
   // channel id -> the drafts of the other members, in the order they started
   const drafts = ref<Record<string, TypingDraft[]>>({});
   // "channelId:userId" -> the timer that removes that draft, not reactive
@@ -573,14 +572,12 @@ export const useChatStore = defineStore("chat", () => {
     }
     draftTimers.clear();
     drafts.value = {};
-    notifyMentionsOnly.value = false;
   }
 
   return {
     channels,
     isLoadingChannels,
     fetchChannels,
-    notifyMentionsOnly,
     messagesByChannel,
     sortedChannels,
     findChannel,
