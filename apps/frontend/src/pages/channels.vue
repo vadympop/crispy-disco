@@ -15,6 +15,7 @@
           <UserAvatar
             v-if="channel.isDirect"
             :nick-name="chat.directPartner(channel)?.nickname ?? ''"
+            :src="chat.directPartner(channel)?.avatarUrl"
             size="28px"
             class="q-mr-sm cursor-pointer"
           >

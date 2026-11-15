@@ -5,6 +5,7 @@
   >
     <UserAvatar
       :nick-name="message.author.nickname"
+      :src="message.author.avatarUrl"
       class="author q-mr-sm q-mt-xs"
     >
       <UserProfileMenu

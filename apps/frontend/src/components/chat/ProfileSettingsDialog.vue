@@ -14,6 +14,7 @@
             <UserAvatar
               :nick-name="form.nickName || auth.nickname || ''"
               :src="form.avatarUrl"
+              own
               size="72px"
               class="q-mr-md"
             />
@@ -151,7 +152,6 @@
 import { reactive, ref, useTemplateRef } from "vue";
 import { Notify } from "quasar";
 import { STATUS_OPTIONS, type UserStatus } from "@/lib/status";
-import { avatarSrc } from "@/lib/avatar";
 import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
@@ -183,7 +183,7 @@ function reset() {
   form.nickName = auth.nickname ?? "";
   form.firstName = auth.me?.firstName ?? "";
   form.lastName = auth.me?.lastName ?? "";
-  form.avatarUrl = avatarSrc(auth.me?.avatarUrl) ?? "";
+  form.avatarUrl = auth.me?.avatarUrl ?? "";
   form.status = (auth.me?.status ?? "online") as UserStatus;
   form.notifyMentionsOnly = auth.me?.notifyMentionsOnly ?? false;
   pickedAvatar.value = null;

@@ -1,7 +1,7 @@
 <template>
   <q-item clickable class="status-bar">
     <q-item-section avatar>
-      <UserAvatar :nick-name="auth.nickname ?? ''">
+      <UserAvatar :nick-name="auth.nickname ?? ''" :src="auth.me?.avatarUrl">
         <q-badge
           floating
           rounded
