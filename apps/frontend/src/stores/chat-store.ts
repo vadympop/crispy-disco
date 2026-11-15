@@ -356,7 +356,7 @@ export const useChatStore = defineStore("chat", () => {
     removeChannel(name);
   }
 
-  // Another user (or I, in another tab) changed the nickname or picture.
+  // I changed my nickname or picture (others see it after a reload).
   // Everything points to users by id, so only the copies embedded in the
   // loaded messages and channels need the new values.
   // Old "@nick" mentions in texts stay as written.

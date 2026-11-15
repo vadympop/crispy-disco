@@ -59,10 +59,9 @@ export default defineBoot(({ router }) => {
   socket.on("channel:deleted", ({ channelId }) =>
     leaveChannelPage(chat.onChannelDeleted(channelId))
   );
-  // a new nickname, status or picture of someone I share a channel with
-  socket.on("user:updated", profile => {
-    auth.onUserUpdated(profile);
-    users.onUserUpdated(profile);
-    chat.onUserUpdated(profile);
+  // the status of someone I share a channel with (or mine, from another tab)
+  socket.on("user:status", ({ userId, status }) => {
+    auth.onStatusChanged(userId, status);
+    users.onStatusChanged(userId, status);
   });
 });

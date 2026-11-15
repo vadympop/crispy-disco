@@ -29,27 +29,24 @@ export default class UserService {
   async updateProfile(user: User, changes: ProfileChanges) {
     user.merge(changes)
     await user.save()
-    await realtime.userUpdated(user)
   }
 
   async setStatus(user: User, status: UserStatus) {
     user.status = status
     await user.save()
-    await realtime.userUpdated(user)
+    await realtime.userStatusChanged(user)
   }
 
   async setAvatar(user: User, file: MultipartFile) {
     await this.avatarService.store(user.id, file)
     user.avatarUpdatedAt = DateTime.now()
     await user.save()
-    await realtime.userUpdated(user)
   }
 
   async removeAvatar(user: User) {
     await this.avatarService.delete(user.id)
     user.avatarUpdatedAt = null
     await user.save()
-    await realtime.userUpdated(user)
   }
 
   // What the viewer has in common with another user, for the profile popup.

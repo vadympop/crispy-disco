@@ -287,7 +287,7 @@ async function onSubmit() {
       await auth.removeAvatar();
     }
 
-    // the socket brings the same update, but not while I am offline
+    // my own messages and chats show the new nickname and picture now
     if (auth.me) {
       chat.onUserUpdated(auth.me);
     }

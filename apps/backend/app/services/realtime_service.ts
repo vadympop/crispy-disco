@@ -5,13 +5,12 @@ import db from '@adonisjs/lucid/services/db'
 import type Channel from '#models/channel'
 import type Message from '#models/message'
 import type User from '#models/user'
+import type { UserStatus } from '#validators/user'
 import ChannelTransformer from '#transformers/channel_transformer'
 import MessageTransformer from '#transformers/message_transformer'
-import PublicProfileTransformer from '#transformers/public_profile_transformer'
 
 export type MessageData = InferData<MessageTransformer>
 export type ChannelData = InferData<ChannelTransformer>
-export type PublicProfileData = InferData<PublicProfileTransformer>
 export type SocketUser = { id: string; nickname: string }
 export type RemovedReason = 'revoked' | 'banned'
 
@@ -24,7 +23,7 @@ export interface ServerToClientEvents {
   'channel:added': (channel: ChannelData) => void
   'channel:removed': (payload: { channelId: string; reason: RemovedReason }) => void
   'channel:deleted': (payload: { channelId: string }) => void
-  'user:updated': (user: PublicProfileData) => void
+  'user:status': (payload: { userId: string; status: UserStatus }) => void
 }
 
 export interface ClientToServerEvents {
@@ -113,9 +112,11 @@ class RealtimeService {
     this.io?.to(userRoom(userId)).emit('channel:removed', { channelId, reason })
   }
 
-  // A new nickname, status or picture: everyone who shares a channel with
-  // the user sees it, and so do the user's own other tabs
-  async userUpdated(user: User) {
+  // Only the status is sent live, it is small and others must see it.
+  // A new nickname or picture is seen by the others after a reload.
+  // Everyone who shares a channel with the user gets it, and so do the
+  // user's own other tabs.
+  async userStatusChanged(user: User) {
     if (!this.io) return
     const memberships = await db
       .from('channel_members')
@@ -124,8 +125,10 @@ class RealtimeService {
       .select('channel_id')
     const rooms = [userRoom(user.id), ...memberships.map((row) => channelRoom(row.channel_id))]
 
-    const data = await serializer.serialize(PublicProfileTransformer.transform(user))
-    this.io.to(rooms).emit('user:updated', data)
+    this.io.to(rooms).emit('user:status', {
+      userId: user.id,
+      status: user.status as UserStatus,
+    })
   }
 
   channelDeleted(channelId: string) {
