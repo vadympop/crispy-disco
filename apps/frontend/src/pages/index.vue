@@ -26,7 +26,7 @@
     </q-header>
 
     <q-page-container>
-      <q-page>
+      <q-page class="column">
         <section class="hero text-white">
           <!-- hand-drawn arrow nudging visitors towards the header buttons -->
           <div class="landing-container hero-pointer gt-xs">
@@ -170,6 +170,7 @@ const features: Feature[] = [
 }
 
 .hero {
+  flex-grow: 1;
   background: #505ba3;
   padding: 104px 0 80px;
 }

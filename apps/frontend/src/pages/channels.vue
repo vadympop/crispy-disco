@@ -80,7 +80,7 @@
 
     <!-- The command line is a fixed element of the app, visible on every chat screen -->
     <q-footer class="chat-footer">
-      <TypingIndicator v-if="channel" :key="channel.name" />
+      <TypingIndicator v-if="channel" :channel="channel.name" />
       <div v-else class="typing-placeholder" />
       <CommandLine
         :channel="channel?.name ?? null"

@@ -1,45 +1,31 @@
 import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
-import type { Message, TypingDraft, UserStats } from "@/types/chat";
-import type { Channel, PublicProfile, User } from "@/types/api";
+import type { Channel, Message, PublicProfile } from "@/types/api";
+import type { RemovedReason } from "@cisco-disco/backend/realtime";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
-import {
-  generateHistory,
-  mockChannels,
-  mockMembers,
-  mockOtherChannels,
-  mockUsers
-} from "@/mocks/chat";
 
-const PAGE_SIZE = 20;
-const KICKS_TO_BAN = 3;
+// messages per history request (the infinite scroll loads one page at a time)
+const PAGE_SIZE = 30;
+// messages per request when catching up after a reconnect (the server max)
+const CATCH_UP_PAGE_SIZE = 100;
+// a draft disappears when its author sends no update for this long
+// (closed the tab, lost the connection, or just stopped typing)
+const DRAFT_TIMEOUT_MS = 5000;
+
+// What another member is writing in a channel right now
+export interface TypingDraft {
+  userId: string;
+  nickname: string;
+  text: string;
+}
 
 // What the UI should do after a command ran
 export interface CommandResult {
   navigateTo?: string;
   showMembers?: boolean;
-}
-
-// Stand-in for the server: the full history of every channel, oldest first.
-// The store only "downloads" PAGE_SIZE messages from it at a time.
-const serverHistory: Record<string, Message[]> = {};
-for (const channel of [...mockChannels, ...mockOtherChannels]) {
-  serverHistory[channel.name] = generateHistory(channel.name, 120);
-}
-
-// TODO: temporary, the mocks list members by nick
-function mockMembersToIds(): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
-  for (const [channel, nicks] of Object.entries(mockMembers)) {
-    result[channel] = nicks
-      .map(nick => mockUsers.find(user => user.nickName === nick))
-      .filter(user => user !== undefined)
-      .map(user => String(user.id));
-  }
-  return result;
 }
 
 function notifyError(message: string) {
@@ -52,28 +38,17 @@ function notifyInfo(message: string) {
 
 export const useChatStore = defineStore("chat", () => {
   const auth = useAuthStore();
-  // TODO: temporary, the mocks still use the old User shape until /users exists
-  const users = ref<User[]>(
-    mockUsers.map(user => ({
-      ...user,
-      id: String(user.id),
-      nickname: user.nickName
-    })) as unknown as User[]
-  );
   // Filled from the API by fetchChannels()
   const channels = ref<Channel[]>([]);
   const isLoadingChannels = ref(false);
-  // All three are keyed by channel name and hold user ids
-  const members = ref<Record<string, string[]>>(mockMembersToIds());
-  const bans = ref<Record<string, string[]>>({});
-  // channel -> kicked user id -> ids of members who voted for the kick
-  const kickVotes = ref<Record<string, Record<string, string[]>>>({});
   const notifyMentionsOnly = ref(false);
-  const typing = ref<TypingDraft[]>([]);
+  // channel id -> the drafts of the other members, in the order they started
+  const drafts = ref<Record<string, TypingDraft[]>>({});
+  // "channelId:userId" -> the timer that removes that draft, not reactive
+  const draftTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+  // channel id -> the loaded part of its history, oldest first
   const messagesByChannel = ref<Record<string, Message[]>>({});
-  // index in serverHistory of the oldest message already loaded
-  const historyCursor: Record<string, number> = {};
 
   // Invited channels are pinned to the top, the rest by latest activity
   const sortedChannels = computed(() =>
@@ -98,11 +73,6 @@ export const useChatStore = defineStore("chat", () => {
 
   function findChannel(name: string) {
     return channels.value.find(channel => channel.name === name);
-  }
-
-  // Nicks are what people type (commands, @mentions), ids are what we store
-  function findUser(nickName: string) {
-    return users.value.find(user => user.nickname === nickName);
   }
 
   // The other person in a direct chat; undefined for normal channels.
@@ -155,44 +125,86 @@ export const useChatStore = defineStore("chat", () => {
     return result.data;
   }
 
-  // Loads the next page of older messages. Returns false when there are no more.
-  function loadOlder(channelName: string): boolean {
-    const history = serverHistory[channelName] ?? [];
-    const cursor = historyCursor[channelName] ?? history.length;
-    const start = Math.max(0, cursor - PAGE_SIZE);
-
-    const older = history.slice(start, cursor);
-    const loaded = messagesByChannel.value[channelName] ?? [];
-    messagesByChannel.value[channelName] = [...older, ...loaded];
-    historyCursor[channelName] = start;
-
-    return start > 0;
+  // The loaded messages of a channel, oldest first
+  function messagesOf(channelName: string): Message[] {
+    const channel = findChannel(channelName);
+    return channel ? (messagesByChannel.value[channel.id] ?? []) : [];
   }
 
-  function sendMessage(channelName: string, text: string) {
-    const myNick = auth.nickname;
-    if (!myNick) {
+  // Loads the page before the oldest loaded message, or the newest page
+  // the first time. Returns false when the channel has no older messages.
+  async function loadOlder(channelName: string): Promise<boolean> {
+    const channel = findChannel(channelName);
+    if (!channel) {
+      return false;
+    }
+    const before = messagesOf(channelName)[0]?.cursor ?? undefined;
+
+    const result = await client.api.messages.index({
+      params: { id: channel.id },
+      query: { before, limit: PAGE_SIZE }
+    });
+    const { messages, hasMore } = result.data;
+
+    // read again after the request: the socket may have added a message,
+    // which can then also be on this page
+    const loaded = messagesByChannel.value[channel.id] ?? [];
+    const loadedIds = new Set(loaded.map(message => message.id));
+    messagesByChannel.value[channel.id] = [
+      ...messages.filter(message => !loadedIds.has(message.id)),
+      ...loaded
+    ];
+    return hasMore;
+  }
+
+  // Adds a new message at the end of its channel, once. Used for my own
+  // messages and for the ones that arrive over the socket.
+  function addMessage(message: Message) {
+    const loaded = messagesByChannel.value[message.channelId] ?? [];
+    if (loaded.some(m => m.id === message.id)) {
       return;
     }
+    messagesByChannel.value[message.channelId] = [...loaded, message];
+    // the draft became this message
+    removeDraft(message.channelId, message.author.id);
+
+    const channel = channels.value.find(c => c.id === message.channelId);
+    if (channel && message.createdAt) {
+      channel.lastMessageAt = message.createdAt;
+    }
+  }
+
+  // message:updated, the author edited a message
+  function onMessageUpdated(message: Message) {
+    const loaded = messagesByChannel.value[message.channelId] ?? [];
+    const index = loaded.findIndex(m => m.id === message.id);
+    if (index !== -1) {
+      loaded[index] = message;
+    }
+  }
+
+  // message:deleted, the author or the admin deleted a message
+  function onMessageDeleted(channelId: string, messageId: string) {
+    const loaded = messagesByChannel.value[channelId];
+    if (loaded) {
+      messagesByChannel.value[channelId] = loaded.filter(
+        m => m.id !== messageId
+      );
+    }
+  }
+
+  async function sendMessage(channelName: string, text: string) {
     const channel = findChannel(channelName);
     if (!channel || channel.invited) {
       notifyError("You can only post in channels you are a member of");
       return;
     }
 
-    const message: Message = {
-      id: Date.now(),
-      channel: channelName,
-      // TODO: mock messages only know the author's nick
-      authorNick: myNick,
-      text,
-      createdAt: new Date().toISOString()
-    };
-    const loaded = messagesByChannel.value[channelName] ?? [];
-    messagesByChannel.value[channelName] = [...loaded, message];
-    // the fake server keeps it too, so it counts in the user stats
-    (serverHistory[channelName] ??= []).push(message);
-    channel.lastMessageAt = message.createdAt;
+    const result = await client.api.messages.store({
+      params: { id: channel.id },
+      body: { content: text }
+    });
+    addMessage(result.data);
   }
 
   // /join: joins a public channel, accepts an invite, or creates the channel.
@@ -211,12 +223,6 @@ export const useChatStore = defineStore("chat", () => {
     });
     const { channel, created } = result.data;
     upsertChannel(channel);
-
-    const myId = auth.userId;
-    const current = members.value[name] ?? [];
-    if (myId && !current.includes(myId)) {
-      members.value[name] = [...current, myId];
-    }
 
     if (created) {
       notifyInfo(
@@ -238,38 +244,24 @@ export const useChatStore = defineStore("chat", () => {
     return result.data.name;
   }
 
-  function userStats(user: Pick<User, "id" | "nickname">): UserStats {
-    // TODO: mock messages only know the author's nick
-    let messageCount = 0;
-    for (const history of Object.values(serverHistory)) {
-      messageCount += history.filter(
-        m => m.authorNick === user.nickname
-      ).length;
-    }
-
-    const myId = auth.userId ?? "";
-    const sharedChannels = channels.value
-      .filter(
-        c =>
-          !c.invited &&
-          !c.isDirect &&
-          members.value[c.name]?.includes(user.id) &&
-          members.value[c.name]?.includes(myId)
-      )
-      .map(c => c.name);
-
-    return { messageCount, sharedChannels };
-  }
-
   function removeChannel(name: string) {
     channels.value = channels.value.filter(channel => channel.name !== name);
   }
 
-  // Local cleanup once the user is no longer in the channel
-  function forgetChannel(name: string) {
+  // Local cleanup once the user is no longer in the channel. Returns false
+  // when it was already gone: after /quit the server also sends
+  // channel:deleted to me, and whichever comes first shows the notice.
+  function forgetChannel(name: string): boolean {
+    const channel = findChannel(name);
+    if (!channel) {
+      return false;
+    }
+    delete messagesByChannel.value[channel.id];
+    for (const draft of drafts.value[channel.id] ?? []) {
+      removeDraft(channel.id, draft.userId);
+    }
     removeChannel(name);
-    delete members.value[name];
-    delete messagesByChannel.value[name];
+    return true;
   }
 
   // /cancel: leave the channel. When the admin leaves, the server deletes it.
@@ -284,8 +276,9 @@ export const useChatStore = defineStore("chat", () => {
     const { channelDeleted } = await client.api.channels.cancel({
       params: { id: channel.id }
     });
-    forgetChannel(name);
-    notifyInfo(channelDeleted ? `${label} was deleted` : `You left ${label}`);
+    if (forgetChannel(name)) {
+      notifyInfo(channelDeleted ? `${label} was deleted` : `You left ${label}`);
+    }
     return true;
   }
 
@@ -298,9 +291,56 @@ export const useChatStore = defineStore("chat", () => {
 
     const label = channelLabel(name);
     await client.api.channels.destroy({ params: { id: channel.id } });
-    forgetChannel(name);
-    notifyInfo(`${label} was deleted`);
+    if (forgetChannel(name)) {
+      notifyInfo(`${label} was deleted`);
+    }
     return true;
+  }
+
+  // Socket events: the server tells me about changes other people made.
+  // The ones that remove a channel return its name, so the caller can
+  // leave its page if it is open.
+
+  // channel:invited, shown highlighted at the top of the list
+  function onChannelInvited(channel: Channel) {
+    upsertChannel(channel);
+    notifyInfo(`You were invited to #${channel.name}`);
+  }
+
+  // channel:added, someone opened a direct chat with me
+  function onChannelAdded(channel: Channel) {
+    upsertChannel(channel);
+  }
+
+  // channel:removed, I was revoked (also an invite taken back) or banned
+  function onChannelRemoved(
+    channelId: string,
+    reason: RemovedReason
+  ): string | undefined {
+    const channel = channels.value.find(c => c.id === channelId);
+    if (!channel) {
+      return undefined;
+    }
+    forgetChannel(channel.name);
+    notifyInfo(
+      reason === "banned"
+        ? `You were banned from #${channel.name}`
+        : `You were removed from #${channel.name}`
+    );
+    return channel.name;
+  }
+
+  // channel:deleted, the admin quit or left, or the channel expired
+  function onChannelDeleted(channelId: string): string | undefined {
+    const channel = channels.value.find(c => c.id === channelId);
+    if (!channel) {
+      return undefined;
+    }
+    // read it before the channel is gone, like in leaveChannel
+    const label = channelLabel(channel.name);
+    forgetChannel(channel.name);
+    notifyInfo(`${label} was deleted`);
+    return channel.name;
   }
 
   // Accepting an invite is the same as joining the channel
@@ -317,113 +357,55 @@ export const useChatStore = defineStore("chat", () => {
     removeChannel(name);
   }
 
-  // Everything else uses ids, so only the places that still store
-  // a nick follow the rename. Old "@nick" mentions in texts stay as written.
+  // Everything else uses ids, so only the loaded message authors follow
+  // the rename. Old "@nick" mentions in texts stay as written.
   function renameNick(oldNick: string, newNick: string) {
     const rename = (nick: string) => (nick === oldNick ? newNick : nick);
 
-    for (const user of users.value) {
-      user.nickname = rename(user.nickname);
-    }
-
-    for (const list of [
-      ...Object.values(messagesByChannel.value),
-      ...Object.values(serverHistory)
-    ]) {
+    for (const list of Object.values(messagesByChannel.value)) {
       for (const message of list) {
-        message.authorNick = rename(message.authorNick);
+        message.author.nickname = rename(message.author.nickname);
       }
     }
   }
 
-  function invite(channel: Channel, user: User) {
-    const nick = user.nickname;
-    if (channel.isPrivate && !isAdmin(channel)) {
-      notifyError("Only the admin can invite to a private channel");
-      return;
-    }
+  // The moderation commands send the nick as typed. The server finds the
+  // user and checks the rules (admin rights, channel type, bans, votes),
+  // its error messages are shown by the api-errors boot file.
 
-    const banned = bans.value[channel.name] ?? [];
-    if (banned.includes(user.id)) {
-      if (!isAdmin(channel)) {
-        notifyError(`${nick} is banned, only the admin can let them back`);
-        return;
-      }
-      bans.value[channel.name] = banned.filter(id => id !== user.id);
-    }
-
-    const current = members.value[channel.name] ?? [];
-    if (current.includes(user.id)) {
-      notifyInfo(`${nick} is already a member`);
-      return;
-    }
-    members.value[channel.name] = [...current, user.id];
-    notifyInfo(`${nick} was invited to #${channel.name}`);
-  }
-
-  function revoke(channel: Channel, user: User) {
-    if (!channel.isPrivate || !isAdmin(channel)) {
-      notifyError("/revoke works only for the admin of a private channel");
-      return;
-    }
-    removeMember(channel.name, user.id);
-    notifyInfo(`${user.nickname} was removed from #${channel.name}`);
-  }
-
-  function kick(channel: Channel, user: User) {
-    const myId = auth.userId;
-    if (!myId) {
-      return;
-    }
-    const nick = user.nickname;
-    if (channel.isPrivate) {
-      notifyError("/kick works only in public channels, use /revoke");
-      return;
-    }
-    if (user.id === myId || user.id === channel.creator.id) {
-      notifyError(`You can't kick ${nick}`);
-      return;
-    }
-    if (!members.value[channel.name]?.includes(user.id)) {
-      notifyError(`${nick} is not a member of #${channel.name}`);
-      return;
-    }
-
-    // Admin kick = permanent ban right away
-    if (isAdmin(channel)) {
-      ban(channel.name, user);
-      return;
-    }
-
-    const votes = (kickVotes.value[channel.name] ??= {});
-    const voters = (votes[user.id] ??= []);
-    if (!voters.includes(myId)) {
-      voters.push(myId);
-    }
-    // Pretend another member already voted too, so the ban can be demoed
-    const otherVoter = members.value[channel.name]?.find(
-      id => id !== user.id && !voters.includes(id)
+  // /invite: the admin can also invite a banned user, which lifts the ban
+  async function invite(channel: Channel, nickname: string) {
+    const result = await client.api.channels.invite({
+      params: { id: channel.id },
+      body: { nickname }
+    });
+    notifyInfo(
+      result.data.unbanned
+        ? `${nickname} is no longer banned and was invited to #${channel.name}`
+        : `${nickname} was invited to #${channel.name}`
     );
-    if (voters.length < KICKS_TO_BAN - 1 && otherVoter) {
-      voters.push(otherVoter);
-    }
-
-    if (voters.length >= KICKS_TO_BAN) {
-      ban(channel.name, user);
-    } else {
-      notifyInfo(`Kick vote for ${nick}: ${voters.length}/${KICKS_TO_BAN}`);
-    }
   }
 
-  function ban(channelName: string, user: User) {
-    removeMember(channelName, user.id);
-    bans.value[channelName] = [...(bans.value[channelName] ?? []), user.id];
-    notifyInfo(`${user.nickname} is permanently banned from #${channelName}`);
+  // /revoke: the admin removes a member or an invite of a private channel
+  async function revoke(channel: Channel, nickname: string) {
+    await client.api.channels.revoke({
+      params: { id: channel.id },
+      body: { nickname }
+    });
+    notifyInfo(`${nickname} was removed from #${channel.name}`);
   }
 
-  function removeMember(channelName: string, userId: string) {
-    members.value[channelName] = (members.value[channelName] ?? []).filter(
-      id => id !== userId
+  // /kick: a vote from a member, an instant permanent ban from the admin
+  async function kick(channel: Channel, nickname: string) {
+    const result = await client.api.channels.kick({
+      params: { id: channel.id },
+      body: { nickname }
+    });
+    const { banned, votes, required } = result.data;
+    notifyInfo(
+      banned
+        ? `${nickname} is permanently banned from #${channel.name}`
+        : `Kick vote for ${nickname}: ${votes}/${required}`
     );
   }
 
@@ -468,16 +450,12 @@ export const useChatStore = defineStore("chat", () => {
           notifyError(`Usage: /${command.name} nickName`);
           return {};
         }
-        // the command names a nick, from here on we work with the user
-        const user = findUser(firstArg);
-        if (!user) {
-          notifyError(`User ${firstArg} does not exist`);
-        } else if (command.name === "invite") {
-          invite(channel, user);
+        if (command.name === "invite") {
+          await invite(channel, firstArg);
         } else if (command.name === "revoke") {
-          revoke(channel, user);
+          await revoke(channel, firstArg);
         } else {
-          kick(channel, user);
+          await kick(channel, firstArg);
         }
         return {};
       }
@@ -497,64 +475,142 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
-  // Fake "someone is typing" so the indicator can be demoed.
-  // Returns a function that stops the simulation.
-  function simulateTyping(): () => void {
-    const drafts = [
-      { nickName: "ed", text: "I think we should move the meeting to Friday" },
-      { nickName: "zuzka", text: "@alex did you see my message?" }
-    ];
-    let tick = 0;
+  // The drafts others are writing in a channel ("X is typing")
+  function draftsOf(channelName: string): TypingDraft[] {
+    const channel = findChannel(channelName);
+    return channel ? (drafts.value[channel.id] ?? []) : [];
+  }
 
-    const timer = setInterval(() => {
-      tick++;
-      // each draft grows one character per tick, then restarts after a pause
-      typing.value = drafts
-        .map((draft, i) => {
-          const length = (tick + i * 15) % (draft.text.length + 20);
-          return {
-            nickName: draft.nickName,
-            text: draft.text.slice(0, length)
-          };
-        })
-        .filter(draft => draft.text.length > 0);
-    }, 200);
+  // typing: the whole draft text, an empty one means they stopped
+  // (sent the message or deleted the text)
+  function onTyping(
+    channelId: string,
+    user: { id: string; nickname: string },
+    text: string
+  ) {
+    // my own drafts from another tab
+    if (user.id === auth.userId) {
+      return;
+    }
+    if (text === "") {
+      removeDraft(channelId, user.id);
+      return;
+    }
 
-    return () => {
-      clearInterval(timer);
-      typing.value = [];
-    };
+    // read it back through the ref: the array `??=` returns is not the
+    // reactive proxy, and a push to it would not update the indicator
+    drafts.value[channelId] ??= [];
+    const list = drafts.value[channelId];
+    const draft = list.find(d => d.userId === user.id);
+    if (draft) {
+      draft.text = text;
+    } else {
+      list.push({ userId: user.id, nickname: user.nickname, text });
+    }
+
+    // every update starts the timeout again
+    const key = `${channelId}:${user.id}`;
+    clearTimeout(draftTimers.get(key));
+    draftTimers.set(
+      key,
+      setTimeout(() => removeDraft(channelId, user.id), DRAFT_TIMEOUT_MS)
+    );
+  }
+
+  function removeDraft(channelId: string, userId: string) {
+    const key = `${channelId}:${userId}`;
+    clearTimeout(draftTimers.get(key));
+    draftTimers.delete(key);
+
+    const list = drafts.value[channelId];
+    if (list) {
+      drafts.value[channelId] = list.filter(d => d.userId !== userId);
+    }
+  }
+
+  // While the socket was down (offline status, lost connection) the events
+  // were missed. Reloads the channel list and fetches the messages after
+  // the newest loaded one in every channel I am still in.
+  async function resync() {
+    await fetchChannels();
+
+    for (const channelId of Object.keys(messagesByChannel.value)) {
+      const channel = channels.value.find(c => c.id === channelId);
+      if (!channel || channel.invited) {
+        // removed or deleted while I was away
+        delete messagesByChannel.value[channelId];
+        delete drafts.value[channelId];
+      } else {
+        await catchUp(channelId);
+      }
+    }
+  }
+
+  async function catchUp(channelId: string) {
+    let after = messagesByChannel.value[channelId]?.at(-1)?.cursor;
+    let hasMore = true;
+    while (after && hasMore) {
+      const result = await client.api.messages.index({
+        params: { id: channelId },
+        query: { after, limit: CATCH_UP_PAGE_SIZE }
+      });
+      const { messages } = result.data;
+      // oldest first, so they land at the end in order
+      for (const message of messages) {
+        addMessage(message);
+      }
+      hasMore = result.data.hasMore;
+      after = messages.at(-1)?.cursor;
+    }
+  }
+
+  // Forgets everything of the previous user after logout
+  function reset() {
+    channels.value = [];
+    messagesByChannel.value = {};
+    for (const timer of draftTimers.values()) {
+      clearTimeout(timer);
+    }
+    draftTimers.clear();
+    drafts.value = {};
+    notifyMentionsOnly.value = false;
   }
 
   return {
-    users,
     channels,
     isLoadingChannels,
     fetchChannels,
-    members,
     notifyMentionsOnly,
-    typing,
     messagesByChannel,
     sortedChannels,
     findChannel,
-    findUser,
     directPartner,
     channelTitle,
     channelLabel,
     isAdmin,
     fetchMembers,
+    messagesOf,
     loadOlder,
+    addMessage,
+    onMessageUpdated,
+    onMessageDeleted,
     sendMessage,
     joinChannel,
     leaveChannel,
     deleteChannel,
     acceptInvite,
     startDirectChat,
-    userStats,
     declineInvite,
     renameNick,
     runCommand,
-    simulateTyping
+    resync,
+    onChannelInvited,
+    onChannelAdded,
+    onChannelRemoved,
+    onChannelDeleted,
+    draftsOf,
+    onTyping,
+    reset
   };
 });
 

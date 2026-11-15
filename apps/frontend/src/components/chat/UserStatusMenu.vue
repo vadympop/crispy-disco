@@ -74,7 +74,7 @@
           <q-item-section>All settings</q-item-section>
         </q-item>
 
-        <q-item v-close-popup clickable class="text-red-4" to="/">
+        <q-item v-close-popup clickable class="text-red-4" @click="auth.logout()">
           <q-item-section avatar><q-icon name="logout" /></q-item-section>
           <q-item-section>Log out</q-item-section>
         </q-item>

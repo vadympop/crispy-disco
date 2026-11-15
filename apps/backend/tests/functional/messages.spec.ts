@@ -39,8 +39,10 @@ async function seedMessages(channel: Channel, author: User, count: number, sameT
       authorId: author.id,
       content: `message ${i}`,
     })
-    const createdAt = sameTime ? start : start.plus({ minutes: i })
-    await Message.query().where('id', message.id).update({ created_at: createdAt.toJSDate() })
+    // set through the model, so Lucid formats the date like the app does
+    // (a raw JS Date is stored by SQLite as a number it can't read back)
+    message.createdAt = sameTime ? start : start.plus({ minutes: i })
+    await message.save()
     ids.push(message.id)
   }
   return ids

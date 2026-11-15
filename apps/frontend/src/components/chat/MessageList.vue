@@ -35,11 +35,6 @@ const chat = useChatStore();
 const scrollArea = useTemplateRef<HTMLDivElement>("scrollArea");
 const hasMore = ref(true);
 
-// Load the newest page right away, older pages come from the infinite scroll
-if (!chat.messagesByChannel[props.channel]) {
-  hasMore.value = chat.loadOlder(props.channel);
-}
-
 const beginning = computed(() => {
   const label = chat.channelLabel(props.channel);
   return chat.findChannel(props.channel)?.isDirect
@@ -47,14 +42,20 @@ const beginning = computed(() => {
     : label;
 });
 
-const messages = computed(() => chat.messagesByChannel[props.channel] ?? []);
+const messages = computed(() => chat.messagesOf(props.channel));
 
-function onLoad(_index: number, done: (stop?: boolean) => void) {
-  // test loading spinner with fake delay
-  setTimeout(() => {
-    hasMore.value = chat.loadOlder(props.channel);
-    done(!hasMore.value);
-  }, 400);
+// The infinite scroll also calls this on mount, while the list is still
+// empty, so the newest page comes from here too
+async function onLoad(_index: number, done: (stop?: boolean) => void) {
+  // a failed request stops the scroll (no retry loop), the error is
+  // shown by the api-errors boot file
+  let stop = true;
+  try {
+    hasMore.value = await chat.loadOlder(props.channel);
+    stop = !hasMore.value;
+  } finally {
+    done(stop);
+  }
 }
 
 async function scrollToBottom() {

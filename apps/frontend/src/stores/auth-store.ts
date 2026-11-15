@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import type { LoginRequest, SignupRequest, User } from "@/types/api";
 import { client } from "@/lib/client";
 import { LOCALSTORAGE_KEYS } from "@/lib/storage-keys";
-import type { UserStatus } from "@/types/chat";
+import type { UserStatus } from "@/lib/status";
 
 export type ProfileUpdate = Pick<User, "nickname" | "firstName" | "lastName">;
 

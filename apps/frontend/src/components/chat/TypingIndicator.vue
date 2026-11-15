@@ -1,17 +1,17 @@
 <template>
   <!-- Fixed height so the command line doesn't jump when someone starts typing -->
   <div class="typing-indicator q-px-md text-caption">
-    <template v-if="chat.typing.length > 0">
+    <template v-if="drafts.length > 0">
       <q-spinner-dots size="14px" class="q-mr-xs" />
-      <template v-for="(draft, i) in chat.typing" :key="draft.nickName">
+      <template v-for="(draft, i) in drafts" :key="draft.userId">
         <span v-if="i > 0">, </span>
         <span class="typing-nick">
-          {{ draft.nickName }}
+          {{ draft.nickname }}
           <!-- Clicking the nick shows what they are writing, updated live -->
           <q-menu anchor="top left" self="bottom left" :offset="[0, 6]">
             <q-card flat class="draft-card">
               <q-card-section class="q-pb-none text-caption draft-label">
-                {{ draft.nickName }} is writing…
+                {{ draft.nickname }} is writing…
               </q-card-section>
               <q-card-section class="draft-text">
                 {{ draft.text }}<span class="caret">|</span>
@@ -20,27 +20,21 @@
           </q-menu>
         </span>
       </template>
-      {{ chat.typing.length === 1 ? "is" : "are" }} typing
+      {{ drafts.length === 1 ? "is" : "are" }} typing
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from "vue";
+import { computed } from "vue";
 import { useChatStore } from "@/stores/chat-store";
+
+const props = defineProps<{ channel: string }>();
 
 const chat = useChatStore();
 
-// The store fakes other users typing until the backend sends real drafts
-let stopTyping: (() => void) | undefined;
-
-onMounted(() => {
-  stopTyping = chat.simulateTyping();
-});
-
-onUnmounted(() => {
-  stopTyping?.();
-});
+// Drafts arrive over the socket and update live, also inside the open menu
+const drafts = computed(() => chat.draftsOf(props.channel));
 </script>
 
 <style scoped>

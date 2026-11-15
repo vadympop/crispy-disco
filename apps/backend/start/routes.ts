@@ -63,6 +63,7 @@ router
     router
       .group(() => {
         router.get(':id', [controllers.Users, 'show'])
+        router.get(':id/stats', [controllers.Users, 'stats'])
       })
       .where('id', router.matchers.uuid())
       .prefix('users')

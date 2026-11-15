@@ -5,7 +5,12 @@ import { LOCALSTORAGE_KEYS } from "@/lib/storage-keys";
 export const client = createTuyau({
   baseUrl: import.meta.env.API_URL,
   registry,
-  headers: { Accept: "application/json" },
+  headers: {
+    Accept: "application/json",
+    // Skips the ngrok free-tier browser warning page, which has no CORS headers.
+    // https://ngrok.com/docs/errors/err_ngrok_6024
+    "ngrok-skip-browser-warning": "true"
+  },
   hooks: {
     beforeRequest: [
       request => {
