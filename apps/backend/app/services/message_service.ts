@@ -9,6 +9,7 @@ import type User from '#models/user'
 import ChannelService from '#services/channel_service'
 import { decodeCursor } from '#services/message_cursor'
 import realtime from '#services/realtime_service'
+import { groupReactions } from '#transformers/message_transformer'
 import type { Reaction } from '#validators/message'
 
 export const DEFAULT_PAGE_SIZE = 50
@@ -170,11 +171,12 @@ export default class MessageService {
     return this.reactionsChanged(message)
   }
 
+  // The same list goes to the channel and back to the caller
   private async reactionsChanged(message: Message) {
-    await message.load('author')
     await message.load('reactions')
-    realtime.messageReactions(message)
-    return message
+    const reactions = groupReactions(message)
+    realtime.messageReactions(message.channelId, message.id, reactions)
+    return reactions
   }
 
   private async findVisible(channel: Channel, messageId: string) {

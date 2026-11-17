@@ -7,10 +7,7 @@ import type Message from '#models/message'
 import type User from '#models/user'
 import type { UserStatus } from '#validators/user'
 import ChannelTransformer from '#transformers/channel_transformer'
-import MessageTransformer, {
-  groupReactions,
-  type ReactionGroup,
-} from '#transformers/message_transformer'
+import MessageTransformer, { type ReactionGroup } from '#transformers/message_transformer'
 
 export type { ReactionGroup } from '#transformers/message_transformer'
 export type { Reaction } from '#validators/message'
@@ -106,11 +103,11 @@ class RealtimeService {
   }
 
   // Only the reactions, not the whole message: they change far more often
-  messageReactions(message: Message) {
-    this.io?.to(channelRoom(message.channelId)).emit('message:reactions', {
-      channelId: message.channelId,
-      messageId: message.id,
-      reactions: groupReactions(message),
+  messageReactions(channelId: string, messageId: string, reactions: ReactionGroup[]) {
+    this.io?.to(channelRoom(channelId)).emit('message:reactions', {
+      channelId,
+      messageId,
+      reactions,
     })
   }
 

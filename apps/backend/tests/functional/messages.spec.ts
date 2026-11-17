@@ -461,10 +461,16 @@ test.group('Messages / edit', (group) => {
   })
 })
 
-type ReactionsBody = { data: { reactions: { reaction: string; userIds: string[] }[] } }
+type ReactionGroupBody = { reaction: string; userIds: string[] }
+type ReactionsBody = { data: { reactions: ReactionGroupBody[] } }
+
+// the server returns the users of a reaction in no particular order
+function sortUsers(groups: ReactionGroupBody[] | undefined) {
+  return groups?.map((group) => ({ ...group, userIds: [...group.userIds].sort() }))
+}
 
 function reactionsOf(response: { body(): unknown }) {
-  return (response.body() as ReactionsBody).data.reactions
+  return sortUsers((response.body() as ReactionsBody).data.reactions)
 }
 
 test.group('Messages / reactions', (group) => {
@@ -483,16 +489,18 @@ test.group('Messages / reactions', (group) => {
     await client.put(`${url}/thumbs_up`).loginAs(bob)
 
     again.assertStatus(200)
+    // only the reactions come back, not the whole message
+    assert.deepEqual(Object.keys((again.body() as ReactionsBody).data), ['reactions'])
     // grouped in the order of the fixed list, not the order they were added
     assert.deepEqual(reactionsOf(again), [
-      { reaction: 'thumbs_up', userIds: [alice.id, bob.id] },
+      { reaction: 'thumbs_up', userIds: [alice.id, bob.id].sort() },
       { reaction: 'heart', userIds: [bob.id] },
     ])
 
     // the history shows them too
     const history = await client.get(`/api/v1/channels/${channel.id}/messages`).loginAs(bob)
-    assert.deepEqual(page(history).messages[0]?.reactions, [
-      { reaction: 'thumbs_up', userIds: [alice.id, bob.id] },
+    assert.deepEqual(sortUsers(page(history).messages[0]?.reactions), [
+      { reaction: 'thumbs_up', userIds: [alice.id, bob.id].sort() },
       { reaction: 'heart', userIds: [bob.id] },
     ])
   })
