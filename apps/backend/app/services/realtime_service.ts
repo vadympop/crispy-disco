@@ -102,7 +102,6 @@ class RealtimeService {
     this.io?.to(channelRoom(channelId)).emit('message:deleted', { channelId, messageId })
   }
 
-  // Only the reactions, not the whole message: they change far more often
   messageReactions(channelId: string, messageId: string, reactions: ReactionGroup[]) {
     this.io?.to(channelRoom(channelId)).emit('message:reactions', {
       channelId,
@@ -129,10 +128,7 @@ class RealtimeService {
     this.io?.to(userRoom(userId)).emit('channel:removed', { channelId, reason })
   }
 
-  // Only the status is sent live, it is small and others must see it.
-  // A new nickname or picture is seen by the others after a reload.
-  // Everyone who shares a channel with the user gets it, and so do the
-  // user's own other tabs.
+  // Only the status is sent live
   async userStatusChanged(user: User) {
     if (!this.io) return
     const memberships = await db

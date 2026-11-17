@@ -57,7 +57,6 @@ router
         router
           .delete(':id/messages/:messageId', [controllers.Messages, 'destroy'])
           .where('messageId', router.matchers.uuid())
-        // the reaction key is checked by the validator (422 for an unknown one)
         router
           .put(':id/messages/:messageId/reactions/:reaction', [
             controllers.MessageReactions,

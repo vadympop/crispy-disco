@@ -5,7 +5,6 @@ export default class extends BaseSchema {
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
-      // Lucid models don't support composite primary keys
       table.uuid('id').primary()
       table
         .uuid('message_id')
@@ -15,7 +14,7 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
       table.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE')
 
-      // a key from the fixed list in #validators/message (thumbs_up, heart, ...)
+      // a key from the fixed list in #validators/message
       table.string('reaction', 32).notNullable()
 
       table.timestamp('created_at')

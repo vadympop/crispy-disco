@@ -1,7 +1,5 @@
 import type { Reaction } from "@cisco-disco/backend/realtime";
 
-// The server stores the key, this is what the user sees. Keyed by the
-// backend type, so a reaction added there and missing here is a type error.
 export const REACTION_EMOJI: Record<Reaction, string> = {
   thumbs_up: "👍",
   heart: "❤️",

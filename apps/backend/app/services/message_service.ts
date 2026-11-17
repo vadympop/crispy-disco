@@ -44,9 +44,6 @@ export default class MessageService {
         })
       }
 
-      // Lucid formats dates only when it saves a model, a raw Date would reach
-      // the driver as is (SQLite binds it as a number and the text comparison
-      // always fails), so format it the way the column was written
       const createdAt = DateTime.fromJSDate(position.createdAt).toFormat(
         query.client.dialect.dateTimeFormat
       )
@@ -147,8 +144,7 @@ export default class MessageService {
     realtime.messageDeleted(channel.id, message.id)
   }
 
-  // Reactions are not channel activity: only a new message keeps a channel
-  // from expiring, so neither of these touches the channel
+  // Reactions are not channel activity
   async react(user: User, channelId: string, messageId: string, reaction: Reaction) {
     const channel = await this.channelService.findOrFail(channelId)
     await this.channelService.ensureMember(user, channel)
@@ -171,7 +167,6 @@ export default class MessageService {
     return this.reactionsChanged(message)
   }
 
-  // The same list goes to the channel and back to the caller
   private async reactionsChanged(message: Message) {
     await message.load('reactions')
     const reactions = groupReactions(message)
