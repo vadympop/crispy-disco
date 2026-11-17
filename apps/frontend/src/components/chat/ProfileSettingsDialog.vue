@@ -14,6 +14,7 @@
             <UserAvatar
               :nick-name="form.nickName || auth.nickname || ''"
               :src="form.avatarUrl"
+              own
               size="72px"
               class="q-mr-md"
             />
@@ -36,7 +37,7 @@
                 no-caps
                 label="Remove picture"
                 class="muted"
-                @click="form.avatarUrl = ''"
+                @click="clearAvatar"
               />
             </div>
             <input
@@ -117,6 +118,28 @@
                 <q-toggle v-model="form.notifyMentionsOnly" />
               </q-item-section>
             </q-item>
+            <q-item>
+              <q-item-section>
+                <q-item-label>Browser notifications</q-item-label>
+                <q-item-label caption>{{
+                  PERMISSION_HINTS[permission]
+                }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn
+                  v-if="permission === 'default'"
+                  rounded
+                  outline
+                  dense
+                  no-caps
+                  color="white"
+                  label="Enable"
+                  class="q-px-md"
+                  @click="enableNotifications"
+                />
+                <q-icon v-else-if="permission === 'granted'" name="check" />
+              </q-item-section>
+            </q-item>
           </q-list>
         </q-card-section>
 
@@ -139,6 +162,7 @@
             no-caps
             color="white"
             label="Save"
+            :loading="saving"
           />
         </q-card-actions>
       </q-form>
@@ -147,9 +171,13 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, useTemplateRef } from "vue";
+import { reactive, ref, useTemplateRef } from "vue";
 import { Notify } from "quasar";
 import { STATUS_OPTIONS, type UserStatus } from "@/lib/status";
+import {
+  notificationPermission,
+  requestNotificationPermission
+} from "@/lib/notifications";
 import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
@@ -160,12 +188,11 @@ const chat = useChatStore();
 const auth = useAuthStore();
 const fileInput = useTemplateRef<HTMLInputElement>("fileInput");
 
-// Pictures are scaled down before they are kept, so the store stays small
+// Pictures are scaled down before they are uploaded
 const AVATAR_SIZE = 160;
 
 // Nothing is applied until Save; Cancel or closing throws the draft away
-// avatarUrl "" means "no picture"
-// TODO: the avatar is only previewed, there is nowhere to save it yet
+// avatarUrl is what the preview shows, "" means "no picture"
 const form = reactive({
   nickName: "",
   firstName: "",
@@ -174,14 +201,36 @@ const form = reactive({
   status: "online" as UserStatus,
   notifyMentionsOnly: false
 });
+// a newly picked picture, uploaded on Save
+const pickedAvatar = ref<File | null>(null);
+const saving = ref(false);
+
+// asked right away, not on Save: the browser only asks after a click
+const permission = ref<NotificationPermission>(notificationPermission());
+const PERMISSION_HINTS: Record<NotificationPermission, string> = {
+  granted: "Shown while the app is in the background",
+  default: "Allow them to hear about new messages",
+  denied: "Blocked or not supported, allow them in the browser's site settings"
+};
+
+async function enableNotifications() {
+  permission.value = await requestNotificationPermission();
+}
 
 function reset() {
   form.nickName = auth.nickname ?? "";
   form.firstName = auth.me?.firstName ?? "";
   form.lastName = auth.me?.lastName ?? "";
-  form.avatarUrl = "";
+  form.avatarUrl = auth.me?.avatarUrl ?? "";
   form.status = (auth.me?.status ?? "online") as UserStatus;
-  form.notifyMentionsOnly = chat.notifyMentionsOnly;
+  form.notifyMentionsOnly = auth.me?.notifyMentionsOnly ?? false;
+  pickedAvatar.value = null;
+  permission.value = notificationPermission();
+}
+
+function clearAvatar() {
+  form.avatarUrl = "";
+  pickedAvatar.value = null;
 }
 
 // same rules as on the register page
@@ -206,14 +255,20 @@ async function onFileChange(event: Event) {
   }
 
   try {
-    form.avatarUrl = await toSquareAvatar(file);
+    const avatar = await toSquareAvatar(file);
+    form.avatarUrl = avatar.preview;
+    pickedAvatar.value = avatar.file;
   } catch {
     Notify.create({ type: "negative", message: "Could not read that image" });
   }
 }
 
-// Center-crops the picture to a square and scales it to AVATAR_SIZE
-async function toSquareAvatar(file: File): Promise<string> {
+// Center-crops the picture to a square JPEG of AVATAR_SIZE. Returns the
+// file to upload and a data: url for the preview (the CSP allows data:
+// images, but no fetch() of them, so both are made from the canvas here)
+async function toSquareAvatar(
+  file: File
+): Promise<{ file: File; preview: string }> {
   const bitmap = await createImageBitmap(file);
   const side = Math.min(bitmap.width, bitmap.height);
 
@@ -235,27 +290,51 @@ async function toSquareAvatar(file: File): Promise<string> {
     );
   bitmap.close();
 
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
-
-function onSubmit() {
-  const oldNick = auth.nickname;
-  const newNick = form.nickName;
-  // TODO: the server checks that the nick is free once the profile is saved
-  // there (PATCH /account/profile), until then it is only renamed locally
-  if (oldNick && newNick !== oldNick) {
-    chat.renameNick(oldNick, newNick);
+  // https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toBlob
+  const blob = await new Promise<Blob | null>(resolve =>
+    canvas.toBlob(resolve, "image/jpeg", 0.85)
+  );
+  if (!blob) {
+    throw new Error("Could not encode the picture");
   }
 
-  auth.updateProfile({
-    nickname: newNick,
-    firstName: form.firstName.trim(),
-    lastName: form.lastName.trim()
-  });
-  auth.setStatus(form.status);
-  Notify.create({ type: "info", message: "Profile updated" });
-  chat.notifyMentionsOnly = form.notifyMentionsOnly;
-  open.value = false;
+  return {
+    file: new File([blob], "avatar.jpg", { type: "image/jpeg" }),
+    preview: canvas.toDataURL("image/jpeg", 0.85)
+  };
+}
+
+// Each part is saved by its own request. If one fails, the server's error
+// is shown (api-errors boot file) and the dialog stays open to try again.
+async function onSubmit() {
+  saving.value = true;
+  try {
+    await auth.updateProfile({
+      nickname: form.nickName,
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      notifyMentionsOnly: form.notifyMentionsOnly
+    });
+
+    if (form.status !== auth.me?.status) {
+      await auth.setStatus(form.status);
+    }
+
+    if (pickedAvatar.value) {
+      await auth.uploadAvatar(pickedAvatar.value);
+    } else if (!form.avatarUrl && auth.me?.avatarUrl) {
+      await auth.removeAvatar();
+    }
+
+    // my own messages and chats show the new nickname and picture now
+    if (auth.me) {
+      chat.onUserUpdated(auth.me);
+    }
+    Notify.create({ type: "info", message: "Profile updated" });
+    open.value = false;
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 

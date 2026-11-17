@@ -1,7 +1,7 @@
 <template>
   <q-item clickable class="status-bar">
     <q-item-section avatar>
-      <UserAvatar :nick-name="auth.nickname ?? ''">
+      <UserAvatar :nick-name="auth.nickname ?? ''" :src="auth.me?.avatarUrl">
         <q-badge
           floating
           rounded
@@ -63,7 +63,12 @@
             >
           </q-item-section>
           <q-item-section side>
-            <q-toggle v-model="chat.notifyMentionsOnly" />
+            <q-toggle
+              :model-value="auth.me?.notifyMentionsOnly ?? false"
+              @update:model-value="
+                value => auth.updateProfile({ notifyMentionsOnly: value })
+              "
+            />
           </q-item-section>
         </q-item>
 
@@ -74,7 +79,12 @@
           <q-item-section>All settings</q-item-section>
         </q-item>
 
-        <q-item v-close-popup clickable class="text-red-4" @click="auth.logout()">
+        <q-item
+          v-close-popup
+          clickable
+          class="text-red-4"
+          @click="auth.logout()"
+        >
           <q-item-section avatar><q-icon name="logout" /></q-item-section>
           <q-item-section>Log out</q-item-section>
         </q-item>
@@ -87,13 +97,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { STATUS_OPTIONS, statusOption } from "@/lib/status";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 import ProfileSettingsDialog from "@/components/chat/ProfileSettingsDialog.vue";
 
-const chat = useChatStore();
 const auth = useAuthStore();
 
 const settingsOpen = ref(false);

@@ -1,6 +1,6 @@
 <template>
   <q-avatar :size="size" text-color="white" :class="avatarClass">
-    <img v-if="src" :src="src" :alt="nickName" />
+    <img v-if="imageSrc" :src="imageSrc" :alt="nickName" />
     <template v-else>{{ nickName.charAt(0).toUpperCase() }}</template>
     <slot />
   </q-avatar>
@@ -8,25 +8,27 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { avatarSrc } from "@/lib/avatar";
 import { useAuthStore } from "@/stores/auth-store";
 
 const props = withDefaults(
   defineProps<{
     nickName: string;
     size?: string;
-    // a picture that isn't saved yet (preview in the settings dialog)
-    // TODO: users have no avatar on the API yet, so this is the only source
+    // the user's avatarUrl from the API, or a data: url while previewing
     src?: string | null;
+    // the settings dialog shows me while the nickname is being edited
+    own?: boolean;
   }>(),
-  { size: "36px", src: null }
+  { size: "36px", src: null, own: false }
 );
 
 const auth = useAuthStore();
 
-// a preview is always of me, even while the nickname is being edited
-const isMe = computed(
-  () => props.src !== null || props.nickName === auth.nickname
-);
+const isMe = computed(() => props.own || props.nickName === auth.nickname);
+
+// a data: url stays as it is, an API path gets the API host
+const imageSrc = computed(() => avatarSrc(props.src));
 
 const avatarClass = computed(() =>
   isMe.value ? "avatar-own" : "avatar-other"

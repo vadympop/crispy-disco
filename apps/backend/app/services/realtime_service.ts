@@ -1,8 +1,11 @@
 import type { DefaultEventsMap, Server } from 'socket.io'
 import type { InferData } from '@adonisjs/core/types/transformers'
 import { BaseSerializer } from '@adonisjs/core/transformers'
+import db from '@adonisjs/lucid/services/db'
 import type Channel from '#models/channel'
 import type Message from '#models/message'
+import type User from '#models/user'
+import type { UserStatus } from '#validators/user'
 import ChannelTransformer from '#transformers/channel_transformer'
 import MessageTransformer from '#transformers/message_transformer'
 
@@ -20,6 +23,7 @@ export interface ServerToClientEvents {
   'channel:added': (channel: ChannelData) => void
   'channel:removed': (payload: { channelId: string; reason: RemovedReason }) => void
   'channel:deleted': (payload: { channelId: string }) => void
+  'user:status': (payload: { userId: string; status: UserStatus }) => void
 }
 
 export interface ClientToServerEvents {
@@ -106,6 +110,25 @@ class RealtimeService {
   channelRemoved(userId: string, channelId: string, reason: RemovedReason) {
     this.leaveChannel(userId, channelId)
     this.io?.to(userRoom(userId)).emit('channel:removed', { channelId, reason })
+  }
+
+  // Only the status is sent live, it is small and others must see it.
+  // A new nickname or picture is seen by the others after a reload.
+  // Everyone who shares a channel with the user gets it, and so do the
+  // user's own other tabs.
+  async userStatusChanged(user: User) {
+    if (!this.io) return
+    const memberships = await db
+      .from('channel_members')
+      .where('user_id', user.id)
+      .where('status', 'member')
+      .select('channel_id')
+    const rooms = [userRoom(user.id), ...memberships.map((row) => channelRoom(row.channel_id))]
+
+    this.io.to(rooms).emit('user:status', {
+      userId: user.id,
+      status: user.status as UserStatus,
+    })
   }
 
   channelDeleted(channelId: string) {

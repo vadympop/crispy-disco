@@ -11,7 +11,7 @@ export default defineConfig(ctx => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ["i18n", "api-errors", "auth", "socket"],
+    boot: ["i18n", "api-errors", "auth", "socket", "notifications"],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ["app.scss"],
@@ -117,7 +117,7 @@ export default defineConfig(ctx => {
       // directives: [],
 
       // Quasar plugins
-      plugins: ["Notify"]
+      plugins: ["Notify", "AppVisibility"]
     },
 
     // animations: 'all', // --- includes all animations
@@ -191,7 +191,15 @@ export default defineConfig(ctx => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
     pwa: {
-      workboxMode: "GenerateSW" // 'GenerateSW' or 'InjectManifest'
+      workboxMode: "GenerateSW", // 'GenerateSW' or 'InjectManifest'
+      // adds the notification click handler to the generated service worker
+      // https://developer.chrome.com/docs/workbox/modules/workbox-build#generatesw
+      extendPWAGenerateSWOptions(cfg) {
+        cfg.importScripts = [
+          ...(cfg.importScripts ?? []),
+          "notification-click.js"
+        ];
+      }
       // swFilename: 'sw.js',
       // manifestFilename: 'manifest.json',
       // extendPWAManifestJson (json) {},

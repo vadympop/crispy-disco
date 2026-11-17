@@ -19,7 +19,7 @@
             @navigated="open = false"
           />
           <q-item-section avatar>
-            <UserAvatar :nick-name="member.nickname" />
+            <UserAvatar :nick-name="member.nickname" :src="member.avatarUrl" />
           </q-item-section>
           <q-item-section>
             <q-item-label>

@@ -1,12 +1,21 @@
 import { watch } from "vue";
 import { defineBoot } from "#q-app";
 import { socket } from "@/lib/socket";
+import {
+  shouldNotify,
+  shouldShowToast,
+  showMessageNotification,
+  showMessageToast
+} from "@/lib/notifications";
+import type { Message } from "@/types/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useChatStore } from "@/stores/chat-store";
+import { useUsersStore } from "@/stores/users-store";
 
 export default defineBoot(({ router }) => {
   const auth = useAuthStore();
   const chat = useChatStore();
+  const users = useUsersStore();
 
   watch(
     () => auth.isLoggedIn && auth.me?.status !== "offline",
@@ -39,12 +48,35 @@ export default defineBoot(({ router }) => {
     }
   }
 
+  // the channel whose page is open, if any
+  function openChannelId(): string | undefined {
+    const params = router.currentRoute.value.params;
+    return "name" in params ? chat.findChannel(params.name)?.id : undefined;
+  }
+
+  // only for messages that arrive live, not the ones caught up by resync()
+  // in the background a browser notification, in the app a toast
+  function notifyAboutMessage(message: Message) {
+    const channel = chat.channels.find(c => c.id === message.channelId);
+    if (!channel) {
+      return;
+    }
+    if (shouldNotify(message, auth.me)) {
+      void showMessageNotification(message, channel, router);
+    } else if (shouldShowToast(message, auth.me, openChannelId())) {
+      showMessageToast(message, channel);
+    }
+  }
+
   // The handlers are registered once, socket.io keeps them across reconnects.
   // My own messages come back here too, addMessage adds each one only once.
   socket.on("typing", ({ channelId, user, text }) =>
     chat.onTyping(channelId, user, text)
   );
-  socket.on("message:new", message => chat.addMessage(message));
+  socket.on("message:new", message => {
+    chat.addMessage(message);
+    notifyAboutMessage(message);
+  });
   socket.on("message:updated", message => chat.onMessageUpdated(message));
   socket.on("message:deleted", ({ channelId, messageId }) =>
     chat.onMessageDeleted(channelId, messageId)
@@ -57,4 +89,9 @@ export default defineBoot(({ router }) => {
   socket.on("channel:deleted", ({ channelId }) =>
     leaveChannelPage(chat.onChannelDeleted(channelId))
   );
+  // the status of someone I share a channel with (or mine, from another tab)
+  socket.on("user:status", ({ userId, status }) => {
+    auth.onStatusChanged(userId, status);
+    users.onStatusChanged(userId, status);
+  });
 });

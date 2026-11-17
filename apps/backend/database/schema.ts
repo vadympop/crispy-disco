@@ -114,8 +114,10 @@ export class MessageSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'firstName', 'id', 'isReceivingMentions', 'lastName', 'nickname', 'password', 'status', 'updatedAt'] as const
+  static $columns = ['avatarUpdatedAt', 'createdAt', 'email', 'firstName', 'id', 'lastName', 'nickname', 'notifyMentionsOnly', 'password', 'status', 'updatedAt'] as const
   $columns = UserSchema.$columns
+  @column.dateTime()
+  declare avatarUpdatedAt: DateTime | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
@@ -125,11 +127,11 @@ export class UserSchema extends BaseModel {
   @column({ isPrimary: true })
   declare id: string
   @column()
-  declare isReceivingMentions: boolean
-  @column()
   declare lastName: string | null
   @column()
   declare nickname: string
+  @column()
+  declare notifyMentionsOnly: boolean
   @column({ serializeAs: null })
   declare password: string
   @column()

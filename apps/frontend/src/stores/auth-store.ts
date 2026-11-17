@@ -5,7 +5,9 @@ import { client } from "@/lib/client";
 import { LOCALSTORAGE_KEYS } from "@/lib/storage-keys";
 import type { UserStatus } from "@/lib/status";
 
-export type ProfileUpdate = Pick<User, "nickname" | "firstName" | "lastName">;
+export type ProfileUpdate = Partial<
+  Pick<User, "nickname" | "firstName" | "lastName" | "notifyMentionsOnly">
+>;
 
 export const useAuthStore = defineStore("auth", () => {
   const me = ref<User | null>(null);
@@ -31,7 +33,7 @@ export const useAuthStore = defineStore("auth", () => {
     if (!localStorage.getItem(LOCALSTORAGE_KEYS.authToken)) return;
     isRestoring.value = true;
     try {
-      const result = await client.api.profile.profile.show({});
+      const result = await client.api.profile.show({});
       me.value = result.data;
     } catch {
       // token expired or revoked
@@ -53,23 +55,42 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function logout() {
     try {
-      await client.api.profile.accessTokens.destroy({});
+      await client.api.accessTokens.destroy({});
     } finally {
       clearSession();
     }
   }
 
-  // TODO: local only until the backend has an endpoint for the status
-  function setStatus(status: UserStatus) {
-    if (me.value) {
-      me.value.status = status;
-    }
+  // The server checks the values (a free nickname, a valid status) and
+  // answers with the whole saved profile. Its errors are shown by the
+  // api-errors boot file, the caller only needs to know it failed.
+  async function setStatus(status: UserStatus) {
+    const result = await client.api.profile.updateStatus({ body: { status } });
+    me.value = result.data;
   }
 
-  // TODO: local only until the backend has a profile update endpoint
-  function updateProfile(profile: ProfileUpdate) {
-    if (me.value) {
-      Object.assign(me.value, profile);
+  async function updateProfile(changes: ProfileUpdate) {
+    const result = await client.api.profile.update({ body: changes });
+    me.value = result.data;
+  }
+
+  // the picture is already cropped to a small JPEG by the settings dialog
+  async function uploadAvatar(file: File) {
+    const result = await client.api.profile.updateAvatar({
+      body: { avatar: file }
+    });
+    me.value = result.data;
+  }
+
+  async function removeAvatar() {
+    const result = await client.api.profile.destroyAvatar({});
+    me.value = result.data;
+  }
+
+  // I changed my status in another tab
+  function onStatusChanged(id: string, status: UserStatus) {
+    if (me.value && id === me.value.id) {
+      me.value.status = status;
     }
   }
 
@@ -85,6 +106,9 @@ export const useAuthStore = defineStore("auth", () => {
     signup,
     logout,
     setStatus,
-    updateProfile
+    updateProfile,
+    uploadAvatar,
+    removeAvatar,
+    onStatusChanged
   };
 });

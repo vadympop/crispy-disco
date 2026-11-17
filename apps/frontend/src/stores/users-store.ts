@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { PublicProfile, UserStats } from "@/types/api";
 import { client } from "@/lib/client";
+import type { UserStatus } from "@/lib/status";
 
 // Short profiles of other users, loaded when the UI needs one
 export const useUsersStore = defineStore("users", () => {
@@ -23,5 +24,13 @@ export const useUsersStore = defineStore("users", () => {
     return result.data;
   }
 
-  return { profiles, stats, fetchProfile, fetchStats };
+  // a live status from the socket, only kept if the profile was loaded
+  function onStatusChanged(id: string, status: UserStatus) {
+    const profile = profiles.value[id];
+    if (profile) {
+      profile.status = status;
+    }
+  }
+
+  return { profiles, stats, fetchProfile, fetchStats, onStatusChanged };
 });

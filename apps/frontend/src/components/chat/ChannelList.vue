@@ -70,6 +70,7 @@
         <UserAvatar
           v-if="channel.isDirect"
           :nick-name="chat.directPartner(channel)?.nickname ?? ''"
+          :src="chat.directPartner(channel)?.avatarUrl"
           size="22px"
           class="dm-avatar"
         />

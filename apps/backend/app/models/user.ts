@@ -40,6 +40,17 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) {
     return `${this.firstName} ${this.lastName}`.trim()
   }
 
+  /**
+   * Where the profile picture can be loaded from, or null without one.
+   * The path is relative to the API host. "v" changes with every upload,
+   * so the browser doesn't keep showing a cached older picture.
+   */
+  get avatarUrl() {
+    return this.avatarUpdatedAt
+      ? `/api/v1/users/${this.id}/avatar?v=${this.avatarUpdatedAt.toMillis()}`
+      : null
+  }
+
   get initials() {
     return this.firstName && this.lastName
       ? `${this.firstName.charAt(0)}${this.lastName.charAt(0)}`.toUpperCase()

@@ -5,6 +5,7 @@
   >
     <UserAvatar
       :nick-name="message.author.nickname"
+      :src="message.author.avatarUrl"
       class="author q-mr-sm q-mt-xs"
     >
       <UserProfileMenu
@@ -48,6 +49,7 @@ import { Notify, copyToClipboard, date } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Message } from "@/types/api";
+import { mentions, splitMentions } from "@/lib/mentions";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
 
@@ -56,12 +58,11 @@ const props = defineProps<{ message: Message }>();
 const chat = useChatStore();
 const auth = useAuthStore();
 
-// "hi @ed !" -> ["hi ", "@ed", " !"]
-const parts = computed(() =>
-  props.message.content.split(/(@[\w.-]+)/).filter(part => part !== "")
-);
+const parts = computed(() => splitMentions(props.message.content));
 
-const mentionsMe = computed(() => parts.value.includes(`@${auth.nickname}`));
+const mentionsMe = computed(() =>
+  mentions(props.message.content, auth.nickname)
+);
 
 // "@ed" -> "ed", ready to paste into /invite, /kick, ...
 async function copyNickname(mention: string) {

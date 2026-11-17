@@ -8,7 +8,12 @@
   >
     <q-card flat class="profile-card">
       <q-card-section class="row items-center no-wrap">
-        <UserAvatar :nick-name="nickName" size="56px" class="q-mr-md">
+        <UserAvatar
+          :nick-name="nickName"
+          :src="user?.avatarUrl"
+          size="56px"
+          class="q-mr-md"
+        >
           <q-badge
             floating
             rounded

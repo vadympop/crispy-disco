@@ -10,6 +10,7 @@ export default class PublicProfileTransformer extends BaseTransformer<User> {
       'lastName',
       'fullName',
       'status',
+      'avatarUrl',
     ])
   }
 }

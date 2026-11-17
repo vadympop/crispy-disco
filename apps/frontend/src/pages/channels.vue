@@ -15,6 +15,7 @@
           <UserAvatar
             v-if="channel.isDirect"
             :nick-name="chat.directPartner(channel)?.nickname ?? ''"
+            :src="chat.directPartner(channel)?.avatarUrl"
             size="28px"
             class="q-mr-sm cursor-pointer"
           >
@@ -105,6 +106,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useQuasar } from "quasar";
 import { useChatStore } from "@/stores/chat-store";
+import { offerNotifications } from "@/lib/notifications";
 import DiscoBallLogo from "@/components/DiscoBallLogo.vue";
 import UserAvatar from "@/components/chat/UserAvatar.vue";
 import UserProfileMenu from "@/components/chat/UserProfileMenu.vue";
@@ -129,6 +131,7 @@ onMounted(() => {
   $q.dark.set(true);
   document.documentElement.style.backgroundColor = CHAT_BG;
   void chat.fetchChannels();
+  offerNotifications();
 });
 
 onBeforeUnmount(() => {
