@@ -6,8 +6,6 @@
     @mouseenter="schedulePicker"
     @mouseleave="hidePicker"
   >
-    <!-- Like Telegram: the reactions appear in the corner once the pointer
-         rests on the message for a moment, or after a long press on phones -->
     <transition name="picker">
       <div v-if="pickerVisible" class="reaction-picker row no-wrap">
         <q-btn
@@ -16,7 +14,6 @@
           flat
           round
           dense
-          size="sm"
           class="reaction-option"
           :class="{
             'reaction-option-mine': chat.hasReacted(message, reaction)
@@ -119,8 +116,6 @@ async function copyNickname(mention: string) {
   }
 }
 
-// how long the pointer rests on a message before the picker appears, short
-// enough to feel instant, long enough not to flash while scrolling past
 const PICKER_DELAY_MS = 400;
 
 const pickerVisible = ref(false);
@@ -131,7 +126,6 @@ function showPicker() {
 }
 
 function schedulePicker() {
-  // phones fire mouseenter on every tap, they use the long press instead
   if (!window.matchMedia("(hover: hover)").matches) {
     return;
   }
@@ -146,13 +140,11 @@ function hidePicker() {
 
 onBeforeUnmount(() => clearTimeout(pickerTimer));
 
-// a failed request is shown by the api-errors boot file
 function react(reaction: Reaction) {
   hidePicker();
   void chat.toggleReaction(props.message, reaction);
 }
 
-// the column is nullable, but the server always sets it
 const time = computed(() =>
   props.message.createdAt
     ? date.formatDate(props.message.createdAt, "HH:mm")
@@ -174,8 +166,6 @@ const time = computed(() =>
   background: rgba(255, 255, 255, 0.04);
 }
 
-/* top right corner, inside the message: the scroll area would clip it
-   above the first message */
 .reaction-picker {
   position: absolute;
   top: var(--space-xs);
@@ -187,8 +177,12 @@ const time = computed(() =>
   border-radius: 999px;
 }
 
-.reaction-option {
-  font-size: 18px;
+.reaction-picker .reaction-option {
+  font-size: 14px;
+  width: 26px;
+  height: 26px;
+  min-width: 0;
+  min-height: 0;
   transition: transform 0.1s;
 }
 
