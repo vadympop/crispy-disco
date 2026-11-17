@@ -57,6 +57,18 @@ router
         router
           .delete(':id/messages/:messageId', [controllers.Messages, 'destroy'])
           .where('messageId', router.matchers.uuid())
+        router
+          .put(':id/messages/:messageId/reactions/:reaction', [
+            controllers.MessageReactions,
+            'store',
+          ])
+          .where('messageId', router.matchers.uuid())
+        router
+          .delete(':id/messages/:messageId/reactions/:reaction', [
+            controllers.MessageReactions,
+            'destroy',
+          ])
+          .where('messageId', router.matchers.uuid())
         router.delete(':id', [controllers.Channels, 'destroy'])
       })
       .where('id', router.matchers.uuid())

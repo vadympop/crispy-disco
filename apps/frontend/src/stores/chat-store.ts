@@ -2,7 +2,11 @@ import { defineStore, acceptHMRUpdate } from "pinia";
 import { computed, ref } from "vue";
 import { Notify } from "quasar";
 import type { Channel, Message, PublicProfile, UserSummary } from "@/types/api";
-import type { RemovedReason } from "@cisco-disco/backend/realtime";
+import type {
+  Reaction,
+  ReactionGroup,
+  RemovedReason
+} from "@cisco-disco/backend/realtime";
 import { client } from "@/lib/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { parseCommand } from "@/lib/commands";
@@ -190,6 +194,44 @@ export const useChatStore = defineStore("chat", () => {
         m => m.id !== messageId
       );
     }
+  }
+
+  // message:reactions, someone added or removed a reaction
+  function onMessageReactions(
+    channelId: string,
+    messageId: string,
+    reactions: ReactionGroup[]
+  ) {
+    const message = messagesByChannel.value[channelId]?.find(
+      m => m.id === messageId
+    );
+    if (message) {
+      message.reactions = reactions;
+    }
+  }
+
+  function hasReacted(message: Message, reaction: Reaction): boolean {
+    const userId = auth.userId;
+    return message.reactions.some(
+      group =>
+        group.reaction === reaction &&
+        userId !== undefined &&
+        group.userIds.includes(userId)
+    );
+  }
+
+  // Adds my reaction, or removes it when I already reacted with it
+  async function toggleReaction(message: Message, reaction: Reaction) {
+    const params = {
+      id: message.channelId,
+      messageId: message.id,
+      reaction
+    };
+    const result = hasReacted(message, reaction)
+      ? await client.api.messageReactions.destroy({ params })
+      : await client.api.messageReactions.store({ params });
+    // the socket event brings the same, this just doesn't wait for it
+    onMessageReactions(message.channelId, message.id, result.data.reactions);
   }
 
   async function sendMessage(channelName: string, text: string) {
@@ -600,6 +642,9 @@ export const useChatStore = defineStore("chat", () => {
     addMessage,
     onMessageUpdated,
     onMessageDeleted,
+    onMessageReactions,
+    hasReacted,
+    toggleReaction,
     sendMessage,
     joinChannel,
     leaveChannel,

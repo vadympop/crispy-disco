@@ -7,7 +7,10 @@ import type Message from '#models/message'
 import type User from '#models/user'
 import type { UserStatus } from '#validators/user'
 import ChannelTransformer from '#transformers/channel_transformer'
-import MessageTransformer from '#transformers/message_transformer'
+import MessageTransformer, { type ReactionGroup } from '#transformers/message_transformer'
+
+export type { ReactionGroup } from '#transformers/message_transformer'
+export type { Reaction } from '#validators/message'
 
 export type MessageData = InferData<MessageTransformer>
 export type ChannelData = InferData<ChannelTransformer>
@@ -18,6 +21,11 @@ export interface ServerToClientEvents {
   'message:new': (message: MessageData) => void
   'message:updated': (message: MessageData) => void
   'message:deleted': (payload: { channelId: string; messageId: string }) => void
+  'message:reactions': (payload: {
+    channelId: string
+    messageId: string
+    reactions: ReactionGroup[]
+  }) => void
   'typing': (payload: { channelId: string; user: SocketUser; text: string }) => void
   'channel:invited': (channel: ChannelData) => void
   'channel:added': (channel: ChannelData) => void
@@ -94,6 +102,14 @@ class RealtimeService {
     this.io?.to(channelRoom(channelId)).emit('message:deleted', { channelId, messageId })
   }
 
+  messageReactions(channelId: string, messageId: string, reactions: ReactionGroup[]) {
+    this.io?.to(channelRoom(channelId)).emit('message:reactions', {
+      channelId,
+      messageId,
+      reactions,
+    })
+  }
+
   async channelInvited(userId: string, channel: Channel) {
     if (!this.io) return
     const data = await serializer.serialize(ChannelTransformer.transform(channel))
@@ -112,10 +128,7 @@ class RealtimeService {
     this.io?.to(userRoom(userId)).emit('channel:removed', { channelId, reason })
   }
 
-  // Only the status is sent live, it is small and others must see it.
-  // A new nickname or picture is seen by the others after a reload.
-  // Everyone who shares a channel with the user gets it, and so do the
-  // user's own other tabs.
+  // Only the status is sent live
   async userStatusChanged(user: User) {
     if (!this.io) return
     const memberships = await db

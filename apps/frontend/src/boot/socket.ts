@@ -81,6 +81,9 @@ export default defineBoot(({ router }) => {
   socket.on("message:deleted", ({ channelId, messageId }) =>
     chat.onMessageDeleted(channelId, messageId)
   );
+  socket.on("message:reactions", ({ channelId, messageId, reactions }) =>
+    chat.onMessageReactions(channelId, messageId, reactions)
+  );
   socket.on("channel:invited", channel => chat.onChannelInvited(channel));
   socket.on("channel:added", channel => chat.onChannelAdded(channel));
   socket.on("channel:removed", ({ channelId, reason }) =>

@@ -64,6 +64,7 @@ type HistoryBody = {
       content: string
       cursor: string
       author: { id: string; nickname: string }
+      reactions: { reaction: string; userIds: string[] }[]
     }[]
     hasMore: boolean
   }
@@ -457,5 +458,117 @@ test.group('Messages / edit', (group) => {
       .json({ content: '  ' })
 
     response.assertStatus(422)
+  })
+})
+
+type ReactionGroupBody = { reaction: string; userIds: string[] }
+type ReactionsBody = { data: { reactions: ReactionGroupBody[] } }
+
+// the server returns the users of a reaction in no particular order
+function sortUsers(groups: ReactionGroupBody[] | undefined) {
+  return groups?.map((group) => ({ ...group, userIds: [...group.userIds].sort() }))
+}
+
+function reactionsOf(response: { body(): unknown }) {
+  return sortUsers((response.body() as ReactionsBody).data.reactions)
+}
+
+test.group('Messages / reactions', (group) => {
+  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
+
+  test('members react, and the same reaction twice counts once', async ({ client, assert }) => {
+    const alice = await createUser('alice')
+    const bob = await createUser('bob')
+    const channel = await createChannel(alice, [bob])
+    const [messageId] = await seedMessages(channel, alice, 1)
+    const url = `/api/v1/channels/${channel.id}/messages/${messageId}/reactions`
+
+    await client.put(`${url}/heart`).loginAs(bob)
+    await client.put(`${url}/thumbs_up`).loginAs(alice)
+    const again = await client.put(`${url}/thumbs_up`).loginAs(bob)
+    await client.put(`${url}/thumbs_up`).loginAs(bob)
+
+    again.assertStatus(200)
+    // only the reactions come back, not the whole message
+    assert.deepEqual(Object.keys((again.body() as ReactionsBody).data), ['reactions'])
+    // grouped in the order of the fixed list, not the order they were added
+    assert.deepEqual(reactionsOf(again), [
+      { reaction: 'thumbs_up', userIds: [alice.id, bob.id].sort() },
+      { reaction: 'heart', userIds: [bob.id] },
+    ])
+
+    // the history shows them too
+    const history = await client.get(`/api/v1/channels/${channel.id}/messages`).loginAs(bob)
+    assert.deepEqual(sortUsers(page(history).messages[0]?.reactions), [
+      { reaction: 'thumbs_up', userIds: [alice.id, bob.id].sort() },
+      { reaction: 'heart', userIds: [bob.id] },
+    ])
+  })
+
+  test('removing a reaction keeps the others', async ({ client, assert }) => {
+    const alice = await createUser('alice')
+    const bob = await createUser('bob')
+    const channel = await createChannel(alice, [bob])
+    const [messageId] = await seedMessages(channel, alice, 1)
+    const url = `/api/v1/channels/${channel.id}/messages/${messageId}/reactions`
+
+    await client.put(`${url}/laugh`).loginAs(alice)
+    await client.put(`${url}/laugh`).loginAs(bob)
+    const response = await client.delete(`${url}/laugh`).loginAs(alice)
+
+    response.assertStatus(200)
+    assert.deepEqual(reactionsOf(response), [{ reaction: 'laugh', userIds: [bob.id] }])
+
+    // removing one that is not there changes nothing
+    const again = await client.delete(`${url}/laugh`).loginAs(alice)
+    again.assertStatus(200)
+    assert.deepEqual(reactionsOf(again), [{ reaction: 'laugh', userIds: [bob.id] }])
+  })
+
+  test('only reactions from the fixed list are accepted', async ({ client }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const [messageId] = await seedMessages(channel, alice, 1)
+
+    const response = await client
+      .put(`/api/v1/channels/${channel.id}/messages/${messageId}/reactions/poop`)
+      .loginAs(alice)
+
+    response.assertStatus(422)
+  })
+
+  test('only members can react, and not to deleted messages', async ({ client }) => {
+    const alice = await createUser('alice')
+    const mallory = await createUser('mallory')
+    const channel = await createChannel(alice)
+    const [messageId] = await seedMessages(channel, alice, 1)
+    const url = `/api/v1/channels/${channel.id}/messages/${messageId}`
+
+    const outsider = await client.put(`${url}/reactions/heart`).loginAs(mallory)
+    outsider.assertStatus(403)
+
+    await client.delete(url).loginAs(alice)
+    const deleted = await client.put(`${url}/reactions/heart`).loginAs(alice)
+    deleted.assertStatus(404)
+  })
+
+  test('a reaction is not channel activity, and an edit keeps the reactions', async ({
+    client,
+    assert,
+  }) => {
+    const alice = await createUser('alice')
+    const channel = await createChannel(alice)
+    const [messageId] = await seedMessages(channel, alice, 1)
+    const url = `/api/v1/channels/${channel.id}/messages/${messageId}`
+    // read back first, the stored value can be less precise than the created one
+    await channel.refresh()
+    const before = channel.lastActivityAt?.toMillis()
+
+    await client.put(`${url}/reactions/wow`).loginAs(alice)
+    await channel.refresh()
+    assert.equal(channel.lastActivityAt?.toMillis(), before)
+
+    const edited = await client.patch(url).loginAs(alice).json({ content: 'changed' })
+    assert.deepEqual(reactionsOf(edited), [{ reaction: 'wow', userIds: [alice.id] }])
   })
 })

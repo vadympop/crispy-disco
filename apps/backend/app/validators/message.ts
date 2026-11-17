@@ -14,3 +14,12 @@ export const sendMessageValidator = vine.create({
 })
 
 export const editMessageValidator = sendMessageValidator
+
+export const REACTIONS = ['thumbs_up', 'heart', 'laugh', 'wow', 'sad'] as const
+export type Reaction = (typeof REACTIONS)[number]
+
+export const reactionValidator = vine.create({
+  params: vine.object({
+    reaction: vine.enum(REACTIONS),
+  }),
+})

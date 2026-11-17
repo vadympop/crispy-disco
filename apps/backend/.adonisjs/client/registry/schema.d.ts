@@ -271,6 +271,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/messages_controller').default['destroy']>>>
     }
   }
+  'message_reactions.store': {
+    methods: ["PUT"]
+    pattern: '/api/v1/channels/:id/messages/:messageId/reactions/:reaction'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/message').reactionValidator)>>
+      paramsTuple: [ParamValue, ParamValue, ParamValue]
+      params: { id: ParamValue; messageId: ParamValue; reaction: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/message').reactionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/message_reactions_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/message_reactions_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'message_reactions.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/channels/:id/messages/:messageId/reactions/:reaction'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/message').reactionValidator)>>
+      paramsTuple: [ParamValue, ParamValue, ParamValue]
+      params: { id: ParamValue; messageId: ParamValue; reaction: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/message').reactionValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/message_reactions_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/message_reactions_controller').default['destroy']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
   'channels.destroy': {
     methods: ["DELETE"]
     pattern: '/api/v1/channels/:id'

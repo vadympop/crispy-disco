@@ -138,6 +138,18 @@ const routes = {
     tokens: [{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":0,"val":"messages","end":""},{"old":"/api/v1/channels/:id/messages/:messageId","type":1,"val":"messageId","end":""}],
     types: placeholder as Registry['messages.destroy']['types'],
   },
+  'message_reactions.store': {
+    methods: ["PUT"],
+    pattern: '/api/v1/channels/:id/messages/:messageId/reactions/:reaction',
+    tokens: [{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"messages","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":1,"val":"messageId","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"reactions","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":1,"val":"reaction","end":""}],
+    types: placeholder as Registry['message_reactions.store']['types'],
+  },
+  'message_reactions.destroy': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/channels/:id/messages/:messageId/reactions/:reaction',
+    tokens: [{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"api","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"v1","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"channels","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":1,"val":"id","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"messages","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":1,"val":"messageId","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":0,"val":"reactions","end":""},{"old":"/api/v1/channels/:id/messages/:messageId/reactions/:reaction","type":1,"val":"reaction","end":""}],
+    types: placeholder as Registry['message_reactions.destroy']['types'],
+  },
   'channels.destroy': {
     methods: ["DELETE"],
     pattern: '/api/v1/channels/:id',
