@@ -7,7 +7,13 @@ import type Message from '#models/message'
 import type User from '#models/user'
 import type { UserStatus } from '#validators/user'
 import ChannelTransformer from '#transformers/channel_transformer'
-import MessageTransformer from '#transformers/message_transformer'
+import MessageTransformer, {
+  groupReactions,
+  type ReactionGroup,
+} from '#transformers/message_transformer'
+
+export type { ReactionGroup } from '#transformers/message_transformer'
+export type { Reaction } from '#validators/message'
 
 export type MessageData = InferData<MessageTransformer>
 export type ChannelData = InferData<ChannelTransformer>
@@ -18,6 +24,11 @@ export interface ServerToClientEvents {
   'message:new': (message: MessageData) => void
   'message:updated': (message: MessageData) => void
   'message:deleted': (payload: { channelId: string; messageId: string }) => void
+  'message:reactions': (payload: {
+    channelId: string
+    messageId: string
+    reactions: ReactionGroup[]
+  }) => void
   'typing': (payload: { channelId: string; user: SocketUser; text: string }) => void
   'channel:invited': (channel: ChannelData) => void
   'channel:added': (channel: ChannelData) => void
@@ -92,6 +103,15 @@ class RealtimeService {
 
   messageDeleted(channelId: string, messageId: string) {
     this.io?.to(channelRoom(channelId)).emit('message:deleted', { channelId, messageId })
+  }
+
+  // Only the reactions, not the whole message: they change far more often
+  messageReactions(message: Message) {
+    this.io?.to(channelRoom(message.channelId)).emit('message:reactions', {
+      channelId: message.channelId,
+      messageId: message.id,
+      reactions: groupReactions(message),
+    })
   }
 
   async channelInvited(userId: string, channel: Channel) {

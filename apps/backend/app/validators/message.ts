@@ -14,3 +14,18 @@ export const sendMessageValidator = vine.create({
 })
 
 export const editMessageValidator = sendMessageValidator
+
+/**
+ * The fixed set of reactions. The database stores the key, the frontend
+ * shows the matching emoji.
+ */
+export const REACTIONS = ['thumbs_up', 'heart', 'laugh', 'wow', 'sad'] as const
+export type Reaction = (typeof REACTIONS)[number]
+
+// request.validateUsing() also passes the route params under `params`
+// https://docs.adonisjs.com/guides/basics/validation#validating-cookies-headers-and-route-params
+export const reactionValidator = vine.create({
+  params: vine.object({
+    reaction: vine.enum(REACTIONS),
+  }),
+})

@@ -26,6 +26,8 @@ export type ScannedRoutes = {
     'messages.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'messages.update': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue} }
     'messages.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue} }
+    'message_reactions.store': { paramsTuple: [ParamValue,ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue,'reaction': ParamValue} }
+    'message_reactions.destroy': { paramsTuple: [ParamValue,ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue,'reaction': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'users.stats': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -71,10 +73,12 @@ export type ScannedRoutes = {
   }
   PUT: {
     'profile.update_status': { paramsTuple?: []; params?: {} }
+    'message_reactions.store': { paramsTuple: [ParamValue,ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue,'reaction': ParamValue} }
   }
   DELETE: {
     'profile.destroy_avatar': { paramsTuple?: []; params?: {} }
     'messages.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue} }
+    'message_reactions.destroy': { paramsTuple: [ParamValue,ParamValue,ParamValue]; params: {'id': ParamValue,'messageId': ParamValue,'reaction': ParamValue} }
     'channels.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
 }

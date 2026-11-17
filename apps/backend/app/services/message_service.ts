@@ -4,10 +4,12 @@ import db from '@adonisjs/lucid/services/db'
 import { Exception } from '@adonisjs/core/exceptions'
 import type Channel from '#models/channel'
 import Message from '#models/message'
+import MessageReaction from '#models/message_reaction'
 import type User from '#models/user'
 import ChannelService from '#services/channel_service'
 import { decodeCursor } from '#services/message_cursor'
 import realtime from '#services/realtime_service'
+import type { Reaction } from '#validators/message'
 
 export const DEFAULT_PAGE_SIZE = 50
 
@@ -29,6 +31,7 @@ export default class MessageService {
       .where('channel_id', channel.id)
       .whereNull('deleted_at')
       .preload('author')
+      .preload('reactions')
 
     const cursorValue = cursor.after ?? cursor.before
     if (cursorValue !== undefined) {
@@ -119,7 +122,9 @@ export default class MessageService {
       await message.related('mentions').sync(mentioned, true, trx)
     })
 
+    // the clients replace the whole message, so it must keep its reactions
     await message.load('author')
+    await message.load('reactions')
     await realtime.messageUpdated(message)
     return message
   }
@@ -139,6 +144,37 @@ export default class MessageService {
     message.deletedAt = DateTime.now()
     await message.save()
     realtime.messageDeleted(channel.id, message.id)
+  }
+
+  // Reactions are not channel activity: only a new message keeps a channel
+  // from expiring, so neither of these touches the channel
+  async react(user: User, channelId: string, messageId: string, reaction: Reaction) {
+    const channel = await this.channelService.findOrFail(channelId)
+    await this.channelService.ensureMember(user, channel)
+    const message = await this.findVisible(channel, messageId)
+
+    await MessageReaction.firstOrCreate({ messageId: message.id, userId: user.id, reaction })
+    return this.reactionsChanged(message)
+  }
+
+  async unreact(user: User, channelId: string, messageId: string, reaction: Reaction) {
+    const channel = await this.channelService.findOrFail(channelId)
+    await this.channelService.ensureMember(user, channel)
+    const message = await this.findVisible(channel, messageId)
+
+    await MessageReaction.query()
+      .where('message_id', message.id)
+      .where('user_id', user.id)
+      .where('reaction', reaction)
+      .delete()
+    return this.reactionsChanged(message)
+  }
+
+  private async reactionsChanged(message: Message) {
+    await message.load('author')
+    await message.load('reactions')
+    realtime.messageReactions(message)
+    return message
   }
 
   private async findVisible(channel: Channel, messageId: string) {

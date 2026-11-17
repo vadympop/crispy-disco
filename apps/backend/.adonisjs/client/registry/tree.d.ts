@@ -39,6 +39,10 @@ export interface ApiDefinition {
     update: typeof routes['messages.update']
     destroy: typeof routes['messages.destroy']
   }
+  messageReactions: {
+    store: typeof routes['message_reactions.store']
+    destroy: typeof routes['message_reactions.destroy']
+  }
   users: {
     show: typeof routes['users.show']
     stats: typeof routes['users.stats']
