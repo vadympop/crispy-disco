@@ -1,9 +1,10 @@
 import { MessageSchema } from '#database/schema'
-import { beforeCreate, belongsTo, column, manyToMany } from '@adonisjs/lucid/orm'
+import { beforeCreate, belongsTo, column, hasMany, manyToMany } from '@adonisjs/lucid/orm'
 import encryption from '@adonisjs/core/services/encryption'
 import User from '#models/user'
 import Channel from '#models/channel'
-import type { BelongsTo, ManyToMany } from '@adonisjs/lucid/types/relations'
+import MessageReaction from '#models/message_reaction'
+import type { BelongsTo, HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { randomUUID } from 'node:crypto'
 
 export default class Message extends MessageSchema {
@@ -48,4 +49,10 @@ export default class Message extends MessageSchema {
     pivotTable: 'message_mentions',
   })
   declare mentions: ManyToMany<typeof User>
+
+  /**
+   * Reactions from the fixed list, one row per user and reaction
+   */
+  @hasMany(() => MessageReaction)
+  declare reactions: HasMany<typeof MessageReaction>
 }

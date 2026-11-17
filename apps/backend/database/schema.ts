@@ -90,6 +90,21 @@ export class MessageMentionSchema extends BaseModel {
   declare userId: string
 }
 
+export class MessageReactionSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'messageId', 'reaction', 'userId'] as const
+  $columns = MessageReactionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare messageId: string
+  @column()
+  declare reaction: string
+  @column()
+  declare userId: string
+}
+
 export class MessageSchema extends BaseModel {
   static $columns = ['authorId', 'channelId', 'content', 'createdAt', 'deletedAt', 'editedAt', 'id', 'parentMessageId', 'updatedAt'] as const
   $columns = MessageSchema.$columns
